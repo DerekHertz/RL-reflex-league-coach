@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# lolcoach runtime data
+.env
+cache/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+node_modules/
+.next/
+
