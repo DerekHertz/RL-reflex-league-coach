@@ -44,3 +44,19 @@ class ChampionsResponse(BaseModel):
     playstyle: PlaystyleVector
     recommendations: list[ChampionRec]
     sample_size: int
+
+
+class LedgerRequest(BaseModel):
+    riot_id: str
+
+
+class LedgerEntry(BaseModel):
+    detector_key: str
+    title: str
+    fired: int
+    total: int
+    rate: float | None
+
+
+class LedgerResponse(BaseModel):
+    entries: list[LedgerEntry]

@@ -90,6 +90,104 @@ async def test_analysis_run_cache_is_keyed_by_engine_version(session_factory) ->
 
 
 @pytest.mark.asyncio
+async def test_save_analysis_run_writes_finding_outcomes_in_same_transaction(session_factory) -> None:
+    async with session_scope(session_factory) as session:
+        await repo.upsert_match(
+            session, match_id="NA1_1", platform="NA1", queue_id=420, game_version="14.20.1", game_creation_ms=0, duration_s=1800
+        )
+        await repo.save_analysis_run(
+            session,
+            match_id="NA1_1",
+            puuid="P1",
+            engine_version="v1",
+            fact_sheet_json="{}",
+            narrative_json="{}",
+            used_fallback=False,
+            champion_id=1,
+            finding_outcomes=[("unspent_gold", "FINDINGS"), ("ward_drought", "CLEAN")],
+        )
+
+    async with session_scope(session_factory) as session:
+        ledger = await repo.list_ledger_for_player(session, puuid="P1")
+    by_key = {row.detector_key: row for row in ledger}
+    assert by_key["unspent_gold"].fired == 1
+    assert by_key["unspent_gold"].total == 1
+    assert by_key["ward_drought"].fired == 0
+    assert by_key["ward_drought"].total == 1
+
+
+@pytest.mark.asyncio
+async def test_save_analysis_run_with_no_finding_outcomes_writes_nothing(session_factory) -> None:
+    async with session_scope(session_factory) as session:
+        await repo.upsert_match(
+            session, match_id="NA1_1", platform="NA1", queue_id=420, game_version="14.20.1", game_creation_ms=0, duration_s=1800
+        )
+        await repo.save_analysis_run(
+            session, match_id="NA1_1", puuid="P1", engine_version="v1", fact_sheet_json="{}", narrative_json="{}", used_fallback=False
+        )
+
+    async with session_scope(session_factory) as session:
+        ledger = await repo.list_ledger_for_player(session, puuid="P1")
+    assert ledger == []
+
+
+@pytest.mark.asyncio
+async def test_list_ledger_for_player_below_min_sample_has_no_rate(session_factory) -> None:
+    async with session_scope(session_factory) as session:
+        for i, outcome in enumerate(["FINDINGS", "CLEAN"]):
+            match_id = f"NA1_{i}"
+            await repo.upsert_match(
+                session, match_id=match_id, platform="NA1", queue_id=420, game_version="14.20.1", game_creation_ms=0, duration_s=1800
+            )
+            await repo.save_analysis_run(
+                session,
+                match_id=match_id,
+                puuid="P1",
+                engine_version="v1",
+                fact_sheet_json="{}",
+                narrative_json="{}",
+                used_fallback=False,
+                champion_id=1,
+                finding_outcomes=[("unspent_gold", outcome)],
+            )
+
+    async with session_scope(session_factory) as session:
+        ledger = await repo.list_ledger_for_player(session, puuid="P1")
+    row = next(r for r in ledger if r.detector_key == "unspent_gold")
+    assert row.total == 2
+    assert row.fired == 1
+    assert row.rate is None  # below the min-3-sample threshold
+
+
+@pytest.mark.asyncio
+async def test_list_ledger_for_player_at_min_sample_has_rate(session_factory) -> None:
+    async with session_scope(session_factory) as session:
+        for i, outcome in enumerate(["FINDINGS", "FINDINGS", "CLEAN"]):
+            match_id = f"NA1_{i}"
+            await repo.upsert_match(
+                session, match_id=match_id, platform="NA1", queue_id=420, game_version="14.20.1", game_creation_ms=0, duration_s=1800
+            )
+            await repo.save_analysis_run(
+                session,
+                match_id=match_id,
+                puuid="P1",
+                engine_version="v1",
+                fact_sheet_json="{}",
+                narrative_json="{}",
+                used_fallback=False,
+                champion_id=1,
+                finding_outcomes=[("unspent_gold", outcome)],
+            )
+
+    async with session_scope(session_factory) as session:
+        ledger = await repo.list_ledger_for_player(session, puuid="P1")
+    row = next(r for r in ledger if r.detector_key == "unspent_gold")
+    assert row.total == 3
+    assert row.fired == 2
+    assert row.rate == pytest.approx(2 / 3)
+
+
+@pytest.mark.asyncio
 async def test_upsert_match_participants(session_factory) -> None:
     async with session_scope(session_factory) as session:
         await repo.upsert_match(

@@ -1,0 +1,154 @@
+.page {
+  padding-top: 54px;
+  min-height: 100vh;
+}
+
+.intake {
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: 40px 34px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lede {
+  color: var(--ink-500);
+}
+
+.form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.riotIdField {
+  flex: 1;
+  min-width: 220px;
+}
+
+.label {
+  color: var(--ink-500);
+}
+
+.input {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-800);
+  font-family: var(--font-spectral);
+  font-size: 15px;
+  border-radius: 0;
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.input:focus-visible {
+  outline: 1px solid var(--gold-500);
+  outline-offset: 2px;
+}
+
+.notIndexedPanel {
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: 0 34px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.notIndexedEyebrow {
+  color: var(--ink-300);
+}
+
+.notIndexedMessage {
+  color: var(--ink-700);
+}
+
+.indexLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 18px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-700);
+  text-decoration: none;
+}
+
+.indexLink:hover {
+  background: rgba(90, 70, 45, 0.06);
+}
+
+.errorPanel {
+  max-width: 68ch;
+  margin: 0 auto 34px;
+  background: var(--ink-900);
+  color: var(--on-ink);
+  padding: 26px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.errorEyebrow {
+  color: var(--on-ink-mute);
+}
+
+.errorMessage {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--on-ink-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.report {
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: 0 34px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--card);
+}
+
+.entryTitle {
+  color: var(--ink-800);
+}
+
+.entryStat {
+  color: var(--ink-500);
+  white-space: nowrap;
+}
+
+.entryMuted {
+  color: var(--ink-300);
+  white-space: nowrap;
+}

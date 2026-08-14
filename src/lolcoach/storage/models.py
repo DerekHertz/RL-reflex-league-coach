@@ -3,18 +3,21 @@
 Deliberately small for v1: match/timeline JSON already lives forever on the
 filesystem cache (see riot/cache.py), and a fact sheet + narrative is cheap
 to store as JSON blobs on `analysis_run` rather than normalized into
-separate finding/metric tables -- those only pay off once cross-match trend
-queries exist (M8), which is out of scope here. No Alembic: every table here
-is either a cheap-to-rebuild index over the file cache or derived from a
-single upstream call, so a schema change just means dropping and recreating
-the (local, single-user) database file.
+separate finding/metric tables. `finding_outcome` is the first normalized
+table (added for the cross-match ledger, M8's original "cross-match trend
+queries" motivation) -- it stores only the (detector, outcome) pair per
+analysis run, not the full finding payload, so `analysis_run`'s JSON blobs
+stay the source of truth. No Alembic: every table here is either a
+cheap-to-rebuild index over the file cache or derived from a single
+upstream call, so a schema change just means dropping and recreating the
+(local, single-user) database file.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -83,3 +86,28 @@ class AnalysisRun(Base):
     created_at: Mapped[datetime] = mapped_column(default=_now)
 
     __table_args__ = (UniqueConstraint("match_id", "puuid", "engine_version"),)
+
+
+class FindingOutcome(Base):
+    """One (detector, analysis_run) outcome row -- feeds the cross-match
+    ledger (GROUP BY puuid, detector_key) and the future per-champion pool
+    grid (GROUP BY puuid, champion_id, detector_key) off the same table.
+
+    Only FINDINGS/CLEAN outcomes get a row here. NOT_APPLICABLE,
+    INSUFFICIENT_DATA, and ERROR all mean the detector didn't evaluate, not
+    that it "didn't fire" -- excluding them at write time means every
+    fired/total ratio computed from this table is correct by construction,
+    with no outcome-filtering to get right (or wrong) at every call site.
+    """
+
+    __tablename__ = "finding_outcome"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    analysis_run_id: Mapped[int] = mapped_column(ForeignKey("analysis_run.id"))
+    puuid: Mapped[str]
+    champion_id: Mapped[int]
+    detector_key: Mapped[str]
+    outcome: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    __table_args__ = (Index("ix_finding_outcome_puuid_detector", "puuid", "detector_key"),)
