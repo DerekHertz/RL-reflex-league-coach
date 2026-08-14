@@ -23,3 +23,13 @@ class CoachingResponse(BaseModel):
     focus_areas: list[str]
     narrations: list[FindingNarration]
     closing: str
+
+
+class ChatTurn(BaseModel):
+    question: str
+    answer: str
+
+
+class ChatAnswer(BaseModel):
+    answer: str
+    cited_finding_ids: list[str] = []

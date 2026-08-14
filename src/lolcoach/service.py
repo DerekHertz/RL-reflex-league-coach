@@ -22,8 +22,9 @@ from lolcoach.detectors.runner import run_detectors
 from lolcoach.domain.match import MatchView
 from lolcoach.domain.timeline import TimelineIndex
 from lolcoach.jobs.runner import Emit, JobRunner
+from lolcoach.llm.chat import answer_question
 from lolcoach.llm.narrator import narrate_match
-from lolcoach.llm.schemas import CoachingResponse
+from lolcoach.llm.schemas import ChatAnswer, ChatTurn, CoachingResponse
 from lolcoach.playstyle.archetypes import get_default_archetypes
 from lolcoach.playstyle.build import build_playstyle_vector
 from lolcoach.playstyle.recommend import recommend_champions
@@ -253,6 +254,17 @@ class CoachService:
             }
             for champion in pool
         ]
+
+    async def answer_chat_question(
+        self, sheet: MatchFactSheet, narrative: CoachingResponse, question: str, history: list[ChatTurn]
+    ) -> dict[str, Any]:
+        """Fully stateless -- no DB session, no cache, no puuid/match_id
+        anywhere in this call. The caller (the API route) already has the
+        fact sheet and narrative in hand from a prior /api/analysis
+        response, so there's nothing here to look up.
+        """
+        answer, used_fallback = await answer_question(sheet, narrative, question, history)
+        return {"answer": answer.answer, "cited_finding_ids": answer.cited_finding_ids, "used_fallback": used_fallback}
 
     async def _save_run(
         self,

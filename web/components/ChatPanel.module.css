@@ -1,0 +1,65 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.eyebrow {
+  color: var(--ink-300);
+}
+
+.turns {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.question {
+  color: var(--ink-500);
+}
+
+.question::before {
+  content: "Q: ";
+}
+
+.answer {
+  color: var(--ink-800);
+}
+
+.form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-800);
+  font-family: var(--font-spectral);
+  font-size: 15px;
+  border-radius: 0;
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.input:focus-visible {
+  outline: 1px solid var(--gold-500);
+  outline-offset: 2px;
+}
+
+.error {
+  color: var(--bad);
+}

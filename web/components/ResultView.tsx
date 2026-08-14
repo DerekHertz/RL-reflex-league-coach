@@ -3,6 +3,7 @@ import { ReportHeader } from "./ReportHeader";
 import { WhatWentWell } from "./WhatWentWell";
 import { FindingCard } from "./FindingCard";
 import { ClosingLine } from "./ClosingLine";
+import { ChatPanel } from "./ChatPanel";
 import { Disclaimer } from "./Disclaimer";
 import { RankStrip } from "./RankStrip";
 import { SkillBandList } from "./SkillBandList";
@@ -52,6 +53,8 @@ export function ResultView({ result }: { result: AnalysisResult }) {
         )}
 
         <ClosingLine text={narrative.closing} />
+
+        <ChatPanel sheet={sheet} narrative={narrative} />
 
         <Disclaimer />
       </main>
