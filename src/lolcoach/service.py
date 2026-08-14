@@ -23,6 +23,7 @@ from lolcoach.domain.match import MatchView
 from lolcoach.domain.timeline import TimelineIndex
 from lolcoach.jobs.runner import Emit, JobRunner
 from lolcoach.llm.chat import answer_question
+from lolcoach.llm.narrator import MODEL as NARRATION_MODEL
 from lolcoach.llm.narrator import narrate_match
 from lolcoach.llm.schemas import ChatAnswer, ChatTurn, CoachingResponse
 from lolcoach.playstyle.archetypes import get_default_archetypes
@@ -144,7 +145,7 @@ class CoachService:
             "fact_sheet": sheet.model_dump(mode="json"),
             "narrative": narrative.model_dump(mode="json"),
             "used_fallback": used_fallback,
-            "model": "claude-opus-5",
+            "model": NARRATION_MODEL,
             "elapsed_s": round(elapsed_s, 1),
         }
 

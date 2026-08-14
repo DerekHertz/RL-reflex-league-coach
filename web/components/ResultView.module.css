@@ -2,6 +2,11 @@
   display: grid;
   grid-template-columns: 1fr 320px;
   align-items: start;
+  /* Matches .main's own 68ch max-width (below) plus the rail's fixed width,
+     so the grid centers as one block instead of .main and .rail drifting
+     to opposite edges of a full-viewport-width grid on wide screens. */
+  max-width: calc(68ch + 320px);
+  margin: 0 auto;
 }
 
 .main {

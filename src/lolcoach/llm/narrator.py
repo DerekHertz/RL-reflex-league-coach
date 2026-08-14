@@ -19,7 +19,7 @@ from lolcoach.llm.guard import NumberProvenanceGuard, repair_note
 from lolcoach.llm.prompts import SYSTEM_COACH
 from lolcoach.llm.schemas import CoachingResponse, FindingNarration
 
-_MODEL = "claude-opus-5"
+MODEL = "claude-opus-5"  # public: service.py reports this as narration provenance
 _MAX_TOKENS = 16000  # shared budget for thinking (on by default on Opus 5) + output
 
 _SEVERITY_ORDER = {"info": 0, "minor": 1, "moderate": 2, "major": 3}
@@ -55,7 +55,7 @@ async def _call_claude(
         content += f"\n\n<repair_instructions>{repair_note}</repair_instructions>"
 
     response = await client.messages.parse(
-        model=_MODEL,
+        model=MODEL,
         max_tokens=_MAX_TOKENS,
         system=[{"type": "text", "text": SYSTEM_COACH, "cache_control": {"type": "ephemeral"}}],
         output_config={"effort": "medium"},
