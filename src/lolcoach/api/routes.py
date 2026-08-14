@@ -8,6 +8,8 @@ from fastapi.responses import StreamingResponse
 from lolcoach.api.schemas import (
     ChampionsRequest,
     ChampionsResponse,
+    ChatRequest,
+    ChatResponse,
     JobStatusResponse,
     LedgerRequest,
     LedgerResponse,
@@ -135,6 +137,17 @@ async def get_pool(body: PoolRequest, request: Request) -> PoolResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     return PoolResponse(champions=champions)
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def post_chat(body: ChatRequest, request: Request) -> ChatResponse:
+    """Stateless: no DB lookup, no puuid/match_id -- the fact sheet and
+    narrative the frontend already holds from /api/analysis travel back in
+    as the request body. See CoachService.answer_chat_question's docstring.
+    """
+    service = _service(request)
+    result = await service.answer_chat_question(body.fact_sheet, body.narrative, body.question, body.history)
+    return ChatResponse(**result)
 
 
 @router.get("/analysis/{job_id}/events")

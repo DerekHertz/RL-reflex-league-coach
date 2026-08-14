@@ -14,7 +14,7 @@ from lolcoach.analysis.factsheet import (
     SubjectFacts,
 )
 from lolcoach.llm.guard import NumberProvenanceGuard
-from lolcoach.llm.schemas import CoachingResponse, FindingNarration
+from lolcoach.llm.schemas import ChatAnswer, CoachingResponse, FindingNarration
 
 
 def _sheet() -> MatchFactSheet:
@@ -133,3 +133,36 @@ def test_timestamp_components_from_findings_are_allowed() -> None:
     response.narrations[0].explanation = "This started at 12 and ran until 16."
     violations = NumberProvenanceGuard(sheet).check(response)
     assert violations == []
+
+
+# check_chat_answer reuses the exact same _check_fields/_check_text core as
+# check() -- these tests exist to confirm that reuse actually happened
+# (same violation kinds, same allowed-number/finding-id state from the sheet)
+# on ChatAnswer's different field shape, not to re-derive the guard's rules.
+
+
+def test_chat_answer_with_no_violations_passes() -> None:
+    sheet = _sheet()
+    answer = ChatAnswer(answer="Gold reached 2200 and sat unspent for 4.0 minutes.", cited_finding_ids=["unspent_gold:0"])
+    assert NumberProvenanceGuard(sheet).check_chat_answer(answer) == []
+
+
+def test_chat_answer_invented_number_is_caught() -> None:
+    sheet = _sheet()
+    answer = ChatAnswer(answer="Gold reached 3750 and sat unspent.", cited_finding_ids=[])
+    violations = NumberProvenanceGuard(sheet).check_chat_answer(answer)
+    assert any(v.field == "answer" and v.kind == "unknown_number" and v.detail == "3750" for v in violations)
+
+
+def test_chat_answer_dangling_cited_finding_id_is_caught() -> None:
+    sheet = _sheet()
+    answer = ChatAnswer(answer="See the ward drought finding.", cited_finding_ids=["ward_drought:0"])
+    violations = NumberProvenanceGuard(sheet).check_chat_answer(answer)
+    assert any(v.field == "cited_finding_ids" and v.kind == "unknown_finding_id" and v.detail == "ward_drought:0" for v in violations)
+
+
+def test_chat_answer_rank_assertion_is_caught() -> None:
+    sheet = _sheet()
+    answer = ChatAnswer(answer="Honestly this reads like Platinum-level decision making.", cited_finding_ids=[])
+    violations = NumberProvenanceGuard(sheet).check_chat_answer(answer)
+    assert any(v.kind == "forbidden_term" and v.detail.lower() == "platinum" for v in violations)

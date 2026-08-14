@@ -15,7 +15,7 @@ from anthropic import AsyncAnthropic
 
 from lolcoach.analysis.factsheet import MatchFactSheet
 from lolcoach.llm.client import get_anthropic
-from lolcoach.llm.guard import GuardViolation, NumberProvenanceGuard
+from lolcoach.llm.guard import NumberProvenanceGuard, repair_note
 from lolcoach.llm.prompts import SYSTEM_COACH
 from lolcoach.llm.schemas import CoachingResponse, FindingNarration
 
@@ -68,20 +68,6 @@ async def _call_claude(
     return parsed
 
 
-def _repair_note(violations: list[GuardViolation]) -> str:
-    lines = [
-        "Your previous response failed validation. Fix these specific problems and try again:",
-    ]
-    for v in violations:
-        if v.kind == "unknown_number":
-            lines.append(f"- In `{v.field}`, the number '{v.detail}' does not appear in the fact sheet. Remove it or replace it with a value that does.")
-        elif v.kind == "unknown_finding_id":
-            lines.append(f"- In `{v.field}`, '{v.detail}' is not a real finding_id from the fact sheet. Use only ids from `findings`.")
-        elif v.kind == "forbidden_term":
-            lines.append(f"- In `{v.field}`, remove the rank/tier reference '{v.detail}' -- this player's rank is not knowable and must never be mentioned.")
-    return "\n".join(lines)
-
-
 def _fallback_response(sheet: MatchFactSheet) -> CoachingResponse:
     top = sorted(sheet.findings, key=lambda f: _SEVERITY_ORDER[f.severity], reverse=True)[:3]
     narrations = [
@@ -121,7 +107,7 @@ async def narrate_match(sheet: MatchFactSheet) -> tuple[CoachingResponse, bool]:
     violations = guard.check(response)
 
     if violations:
-        response = await _call_claude(client, sheet, repair_note=_repair_note(violations))
+        response = await _call_claude(client, sheet, repair_note=repair_note(violations))
         violations = guard.check(response)
 
     if violations:

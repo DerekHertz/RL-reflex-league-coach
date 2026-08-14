@@ -15,7 +15,7 @@ import re
 from typing import Literal, NamedTuple
 
 from lolcoach.analysis.factsheet import MatchFactSheet
-from lolcoach.llm.schemas import CoachingResponse
+from lolcoach.llm.schemas import ChatAnswer, CoachingResponse
 
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
@@ -75,14 +75,8 @@ class NumberProvenanceGuard:
         self._finding_ids = {f.id for f in sheet.findings}
 
     def check(self, response: CoachingResponse) -> list[GuardViolation]:
-        violations: list[GuardViolation] = []
-
-        for finding_id in response.focus_areas:
-            if finding_id not in self._finding_ids:
-                violations.append(GuardViolation("focus_areas", "unknown_finding_id", finding_id))
-        for narration in response.narrations:
-            if narration.finding_id not in self._finding_ids:
-                violations.append(GuardViolation("narrations.finding_id", "unknown_finding_id", narration.finding_id))
+        finding_id_refs: list[tuple[str, str]] = [("focus_areas", fid) for fid in response.focus_areas]
+        finding_id_refs += [("narrations.finding_id", n.finding_id) for n in response.narrations]
 
         text_fields: list[tuple[str, str]] = [
             ("headline", response.headline),
@@ -92,6 +86,21 @@ class NumberProvenanceGuard:
             *(("narrations.drill", n.drill) for n in response.narrations if n.drill),
             ("closing", response.closing),
         ]
+
+        return self._check_fields(text_fields, finding_id_refs)
+
+    def check_chat_answer(self, answer: ChatAnswer) -> list[GuardViolation]:
+        finding_id_refs = [("cited_finding_ids", fid) for fid in answer.cited_finding_ids]
+        return self._check_fields([("answer", answer.answer)], finding_id_refs)
+
+    def _check_fields(
+        self, text_fields: list[tuple[str, str]], finding_id_refs: list[tuple[str, str]]
+    ) -> list[GuardViolation]:
+        violations: list[GuardViolation] = []
+
+        for field, finding_id in finding_id_refs:
+            if finding_id not in self._finding_ids:
+                violations.append(GuardViolation(field, "unknown_finding_id", finding_id))
 
         for field, text in text_fields:
             violations.extend(self._check_text(field, text))
@@ -108,3 +117,19 @@ class NumberProvenanceGuard:
         if forbidden_match:
             violations.append(GuardViolation(field, "forbidden_term", forbidden_match.group()))
         return violations
+
+
+def repair_note(violations: list[GuardViolation]) -> str:
+    """Schema-agnostic -- built entirely from GuardViolation, so it works
+    identically for a CoachingResponse repair and a ChatAnswer repair."""
+    lines = [
+        "Your previous response failed validation. Fix these specific problems and try again:",
+    ]
+    for v in violations:
+        if v.kind == "unknown_number":
+            lines.append(f"- In `{v.field}`, the number '{v.detail}' does not appear in the fact sheet. Remove it or replace it with a value that does.")
+        elif v.kind == "unknown_finding_id":
+            lines.append(f"- In `{v.field}`, '{v.detail}' is not a real finding_id from the fact sheet. Use only ids from `findings`.")
+        elif v.kind == "forbidden_term":
+            lines.append(f"- In `{v.field}`, remove the rank/tier reference '{v.detail}' -- this player's rank is not knowable and must never be mentioned.")
+    return "\n".join(lines)

@@ -195,6 +195,17 @@ export interface PoolResponse {
   champions: PoolChampionEntry[];
 }
 
+export interface ChatTurn {
+  question: string;
+  answer: string;
+}
+
+export interface ChatResponse {
+  answer: string;
+  cited_finding_ids: string[];
+  used_fallback: boolean;
+}
+
 /** Carries the HTTP status alongside the backend's `detail` message so
  * callers can branch on status (e.g. 404 "never analyzed" vs any other
  * failure) without re-parsing the response body themselves. */
@@ -258,6 +269,33 @@ export async function getPool(riotId: string): Promise<PoolResponse> {
   });
   if (!res.ok) {
     let detail = `POST /api/pool failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // Body wasn't JSON (or empty) -- fall back to the generic message.
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}
+
+/** Stateless: fact_sheet/narrative are whatever the frontend already holds
+ * from the /api/analysis response, sent back verbatim -- no server-side
+ * lookup, no match_id/puuid in this request at all. */
+export async function postChatMessage(
+  factSheet: MatchFactSheet,
+  narrative: CoachingResponse,
+  question: string,
+  history: ChatTurn[],
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fact_sheet: factSheet, narrative, question, history }),
+  });
+  if (!res.ok) {
+    let detail = `POST /api/chat failed: ${res.status}`;
     try {
       const body = await res.json();
       if (typeof body?.detail === "string") detail = body.detail;

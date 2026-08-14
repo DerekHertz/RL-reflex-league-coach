@@ -1,5 +1,9 @@
-"""API-facing DTOs -- kept separate from MatchFactSheet/CoachingResponse
-(different audience: these describe job lifecycle, not match content)."""
+"""API-facing DTOs -- mostly kept separate from MatchFactSheet/CoachingResponse
+(different audience: these describe job lifecycle, not match content).
+ChatRequest is the one exception: /api/chat is stateless (see service.py's
+answer_chat_question), so the fact sheet + narrative the frontend already
+holds from a prior /api/analysis response travel back in as the request
+body verbatim, rather than being looked up server-side."""
 
 from __future__ import annotations
 
@@ -7,6 +11,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from lolcoach.analysis.factsheet import MatchFactSheet
+from lolcoach.llm.schemas import ChatTurn, CoachingResponse
 from lolcoach.playstyle.recommend import ChampionRec
 from lolcoach.playstyle.vector import PlaystyleVector
 
@@ -75,3 +81,16 @@ class PoolChampionEntry(BaseModel):
 
 class PoolResponse(BaseModel):
     champions: list[PoolChampionEntry]
+
+
+class ChatRequest(BaseModel):
+    fact_sheet: MatchFactSheet
+    narrative: CoachingResponse
+    question: str
+    history: list[ChatTurn] = []
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    cited_finding_ids: list[str]
+    used_fallback: bool
