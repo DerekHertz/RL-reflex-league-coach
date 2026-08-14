@@ -8,6 +8,7 @@ const NAV_ITEMS: { label: string; href: string | null }[] = [
   { label: "Last match", href: "/" },
   { label: "Champions", href: "/champions" },
   { label: "Ledger", href: "/ledger" },
+  { label: "Your pool", href: "/pool" },
   { label: "Coach", href: null },
 ];
 

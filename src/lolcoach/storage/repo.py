@@ -160,6 +160,56 @@ async def list_ledger_for_player(session: AsyncSession, *, puuid: str) -> list[L
     ]
 
 
+@dataclass(frozen=True, slots=True)
+class PoolChampion:
+    champion_id: int
+    champion_name: str
+    games_played: int
+    entries: list[LedgerRow]
+
+
+async def list_pool_for_player(session: AsyncSession, *, puuid: str) -> list[PoolChampion]:
+    """Fired/total per (champion, detector) cell, grouped by every champion
+    this player has an analyzed match for. `champion_name` is resolved by
+    joining to `MatchParticipant` at query time rather than denormalized
+    onto `finding_outcome` -- one source of truth, no drift risk if a
+    champion is renamed/reworked. `games_played` is a distinct count of
+    `analysis_run_id`, computed separately from the per-detector totals
+    (a single match can produce up to len(DETECTORS) rows, so summing
+    per-detector `total` would overcount games).
+    """
+    join_clause = (MatchParticipant.match_id == AnalysisRun.match_id) & (MatchParticipant.puuid == AnalysisRun.puuid)
+
+    games_result = await session.execute(
+        select(
+            FindingOutcome.champion_id,
+            MatchParticipant.champion_name,
+            func.count(func.distinct(FindingOutcome.analysis_run_id)).label("games_played"),
+        )
+        .join(AnalysisRun, AnalysisRun.id == FindingOutcome.analysis_run_id)
+        .join(MatchParticipant, join_clause)
+        .where(FindingOutcome.puuid == puuid)
+        .group_by(FindingOutcome.champion_id, MatchParticipant.champion_name)
+    )
+    champions = {
+        champion_id: PoolChampion(champion_id=champion_id, champion_name=champion_name, games_played=games_played, entries=[])
+        for champion_id, champion_name, games_played in games_result.all()
+    }
+
+    fired_case = func.sum(case((FindingOutcome.outcome == "FINDINGS", 1), else_=0))
+    entries_result = await session.execute(
+        select(FindingOutcome.champion_id, FindingOutcome.detector_key, fired_case.label("fired"), func.count().label("total"))
+        .where(FindingOutcome.puuid == puuid)
+        .group_by(FindingOutcome.champion_id, FindingOutcome.detector_key)
+    )
+    for champion_id, detector_key, fired, total in entries_result.all():
+        champions[champion_id].entries.append(
+            LedgerRow(detector_key=detector_key, fired=fired, total=total, rate=(fired / total) if total >= MIN_LEDGER_SAMPLE else None)
+        )
+
+    return sorted(champions.values(), key=lambda c: c.games_played, reverse=True)
+
+
 async def list_analysis_runs_for_player(session: AsyncSession, *, puuid: str, limit: int = 20) -> list[AnalysisRun]:
     result = await session.execute(
         select(AnalysisRun).where(AnalysisRun.puuid == puuid).order_by(AnalysisRun.created_at.desc()).limit(limit)

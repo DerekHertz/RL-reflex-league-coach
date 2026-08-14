@@ -60,3 +60,18 @@ class LedgerEntry(BaseModel):
 
 class LedgerResponse(BaseModel):
     entries: list[LedgerEntry]
+
+
+class PoolRequest(BaseModel):
+    riot_id: str
+
+
+class PoolChampionEntry(BaseModel):
+    champion_id: int
+    champion_name: str
+    games_played: int
+    entries: list[LedgerEntry]
+
+
+class PoolResponse(BaseModel):
+    champions: list[PoolChampionEntry]

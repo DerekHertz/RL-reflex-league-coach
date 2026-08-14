@@ -12,6 +12,8 @@ from lolcoach.api.schemas import (
     LedgerRequest,
     LedgerResponse,
     MetaResponse,
+    PoolRequest,
+    PoolResponse,
     StartAnalysisRequest,
     StartAnalysisResponse,
 )
@@ -111,6 +113,28 @@ async def get_ledger(body: LedgerRequest, request: Request) -> LedgerResponse:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     return LedgerResponse(entries=entries)
+
+
+@router.post("/pool", response_model=PoolResponse)
+async def get_pool(body: PoolRequest, request: Request) -> PoolResponse:
+    """Fired/total per (champion, detector) cell across every analyzed
+    match, grouped by champion. Same cold-cache contract as /champions and
+    /ledger: 404s rather than kicking off a background fetch.
+    """
+    service = _service(request)
+    try:
+        champions = await service.get_pool(body.riot_id)
+    except NoIndexedHistoryError:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No indexed match history for this player yet. "
+                "Run POST /api/analysis first to fetch and index their recent matches, then retry."
+            ),
+        ) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return PoolResponse(champions=champions)
 
 
 @router.get("/analysis/{job_id}/events")

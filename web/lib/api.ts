@@ -184,6 +184,17 @@ export interface LedgerResponse {
   entries: LedgerEntry[];
 }
 
+export interface PoolChampionEntry {
+  champion_id: number;
+  champion_name: string;
+  games_played: number;
+  entries: LedgerEntry[];
+}
+
+export interface PoolResponse {
+  champions: PoolChampionEntry[];
+}
+
 /** Carries the HTTP status alongside the backend's `detail` message so
  * callers can branch on status (e.g. 404 "never analyzed" vs any other
  * failure) without re-parsing the response body themselves. */
@@ -228,6 +239,25 @@ export async function getLedger(riotId: string): Promise<LedgerResponse> {
   });
   if (!res.ok) {
     let detail = `POST /api/ledger failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // Body wasn't JSON (or empty) -- fall back to the generic message.
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}
+
+export async function getPool(riotId: string): Promise<PoolResponse> {
+  const res = await fetch(`${API_BASE}/api/pool`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ riot_id: riotId }),
+  });
+  if (!res.ok) {
+    let detail = `POST /api/pool failed: ${res.status}`;
     try {
       const body = await res.json();
       if (typeof body?.detail === "string") detail = body.detail;
