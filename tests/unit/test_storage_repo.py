@@ -187,6 +187,70 @@ async def test_list_ledger_for_player_at_min_sample_has_rate(session_factory) ->
     assert row.rate == pytest.approx(2 / 3)
 
 
+def _participant_row(match_id: str, puuid: str, champion_id: int, champion_name: str) -> dict:
+    return {
+        "match_id": match_id,
+        "puuid": puuid,
+        "participant_id": 1,
+        "team_id": 100,
+        "team_position": "TOP",
+        "champion_id": champion_id,
+        "champion_name": champion_name,
+        "win": True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_list_pool_for_player_groups_by_champion_and_detector(session_factory) -> None:
+    async with session_scope(session_factory) as session:
+        for i, (champion_id, champion_name, outcome) in enumerate(
+            [
+                (1, "Annie", "FINDINGS"),
+                (1, "Annie", "FINDINGS"),
+                (1, "Annie", "CLEAN"),
+                (2, "Ahri", "CLEAN"),
+            ]
+        ):
+            match_id = f"NA1_{i}"
+            await repo.upsert_match(
+                session, match_id=match_id, platform="NA1", queue_id=420, game_version="14.20.1", game_creation_ms=0, duration_s=1800
+            )
+            await repo.upsert_match_participants(session, [_participant_row(match_id, "P1", champion_id, champion_name)])
+            await repo.save_analysis_run(
+                session,
+                match_id=match_id,
+                puuid="P1",
+                engine_version="v1",
+                fact_sheet_json="{}",
+                narrative_json="{}",
+                used_fallback=False,
+                champion_id=champion_id,
+                finding_outcomes=[("unspent_gold", outcome)],
+            )
+
+    async with session_scope(session_factory) as session:
+        pool = await repo.list_pool_for_player(session, puuid="P1")
+
+    by_champion = {c.champion_id: c for c in pool}
+    annie = by_champion[1]
+    assert annie.champion_name == "Annie"
+    assert annie.games_played == 3
+    annie_entry = next(e for e in annie.entries if e.detector_key == "unspent_gold")
+    assert annie_entry.fired == 2
+    assert annie_entry.total == 3
+    assert annie_entry.rate == pytest.approx(2 / 3)
+
+    ahri = by_champion[2]
+    assert ahri.champion_name == "Ahri"
+    assert ahri.games_played == 1
+    ahri_entry = next(e for e in ahri.entries if e.detector_key == "unspent_gold")
+    assert ahri_entry.total == 1
+    assert ahri_entry.rate is None  # below min sample for this champion/detector cell
+
+    # Sorted by games played, most-played champion first.
+    assert [c.champion_id for c in pool] == [1, 2]
+
+
 @pytest.mark.asyncio
 async def test_upsert_match_participants(session_factory) -> None:
     async with session_scope(session_factory) as session:

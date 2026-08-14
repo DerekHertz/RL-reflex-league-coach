@@ -220,6 +220,40 @@ class CoachService:
             for row in ledger
         ]
 
+    async def get_pool(self, riot_id: str) -> list[dict[str, Any]]:
+        """Fired/total per (champion, detector) cell for every champion this
+        player has an analyzed match for, most-played champion first. Same
+        cold-cache 404 contract as get_ledger/get_champion_recommendations.
+        """
+        game_name, _, tag_line = riot_id.partition("#")
+        if not tag_line:
+            raise ValueError(f"expected 'gameName#tagLine', got {riot_id!r}")
+
+        async with session_scope(self._session_factory) as session:
+            player = await repo.get_player_by_riot_id(session, game_name=game_name, tag_line=tag_line)
+            if player is None:
+                raise NoIndexedHistoryError(riot_id)
+            pool = await repo.list_pool_for_player(session, puuid=player.puuid)
+
+        return [
+            {
+                "champion_id": champion.champion_id,
+                "champion_name": champion.champion_name,
+                "games_played": champion.games_played,
+                "entries": [
+                    {
+                        "detector_key": row.detector_key,
+                        "title": TITLES.get(row.detector_key, row.detector_key),
+                        "fired": row.fired,
+                        "total": row.total,
+                        "rate": row.rate,
+                    }
+                    for row in champion.entries
+                ],
+            }
+            for champion in pool
+        ]
+
     async def _save_run(
         self,
         match_id: str,
