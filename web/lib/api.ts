@@ -103,6 +103,11 @@ export interface AnalysisResult {
   fact_sheet: MatchFactSheet;
   narrative: CoachingResponse;
   used_fallback: boolean;
+  /** Always "claude-opus-5" today, but treat as opaque -- narrated by whichever
+   * model actually produced this narrative. */
+  model: string;
+  /** Wall-clock seconds the analysis job took, rounded to 1 decimal. */
+  elapsed_s: number;
 }
 
 export interface AnalysisEvent {

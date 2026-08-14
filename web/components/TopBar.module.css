@@ -1,0 +1,37 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  background: var(--ink-900);
+  border-bottom: 3px double var(--gold-500);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 34px;
+  z-index: 10;
+}
+
+.wordmark {
+  color: var(--on-ink);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+
+.navItem {
+  color: var(--on-ink-mute);
+}
+
+.active {
+  color: var(--gold-300);
+}
+
+.inert {
+  color: var(--on-ink-faint);
+  cursor: default;
+}

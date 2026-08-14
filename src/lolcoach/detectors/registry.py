@@ -7,14 +7,22 @@ an explicit tuple is greppable, ordered, and type-checked.
 import hashlib
 
 from lolcoach.detectors.base import Detector
+from lolcoach.detectors.death_regions import DeathRegionsDetector
 from lolcoach.detectors.gold_curve_shape import GoldCurveShapeDetector
+from lolcoach.detectors.isolation_at_death import IsolationAtDeathDetector
+from lolcoach.detectors.objective_causal_deaths import ObjectiveCausalDeathsDetector
 from lolcoach.detectors.time_dead import TimeDeadDetector
 from lolcoach.detectors.unspent_gold import UnspentGoldDetector
+from lolcoach.detectors.ward_drought import WardDroughtDetector
 
 DETECTORS: tuple[type[Detector], ...] = (
     UnspentGoldDetector,
     TimeDeadDetector,
     GoldCurveShapeDetector,
+    DeathRegionsDetector,
+    WardDroughtDetector,
+    IsolationAtDeathDetector,
+    ObjectiveCausalDeathsDetector,
 )
 
 

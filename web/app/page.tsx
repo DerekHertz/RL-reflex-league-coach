@@ -1,15 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TopBar } from "@/components/TopBar";
+import { Button } from "@/components/Button";
+import { PulseDot } from "@/components/PulseDot";
 import { ResultView } from "@/components/ResultView";
 import { API_BASE, AnalysisEvent, AnalysisResult, startAnalysis } from "@/lib/api";
+import { fetchProgressLabel } from "@/lib/presentation";
+import styles from "./page.module.css";
 
 type Status = "idle" | "running" | "done" | "error";
+
+function statusLine(stage: string, message: string): string {
+  if (stage === "fetching") return fetchProgressLabel(message);
+  if (stage === "analyzing" || stage === "narrating") return `${stage} · ${message}`;
+  return message;
+}
 
 export default function Home() {
   const [riotId, setRiotId] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,27 +33,23 @@ export default function Home() {
     };
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!riotId.includes("#")) {
-      setError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
-      return;
-    }
-
+  async function runAnalysis(id: string) {
     setError(null);
     setResult(null);
     setStatus("running");
     setProgress(0);
+    setStage("queued");
     setMessage("Starting...");
 
     try {
-      const { job_id } = await startAnalysis(riotId);
+      const { job_id } = await startAnalysis(id);
       const es = new EventSource(`${API_BASE}/api/analysis/${job_id}/events`);
       eventSourceRef.current = es;
 
       es.onmessage = (evt) => {
         const data: AnalysisEvent = JSON.parse(evt.data);
         setProgress(data.progress);
+        setStage(data.stage);
         setMessage(data.message);
 
         if (data.status === "done") {
@@ -66,82 +74,74 @@ export default function Home() {
     }
   }
 
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!riotId.includes("#")) {
+      setError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
+      setStatus("error");
+      return;
+    }
+    void runAnalysis(riotId);
+  }
+
+  function handleRetry() {
+    void runAnalysis(riotId);
+  }
+
+  const running = status === "running";
+
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: "2rem 1rem",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h1>LoL Post-Game Coach</h1>
-      <p style={{ color: "#666" }}>
-        Enter your Riot ID to get a peer-relative breakdown of your most
-        recent game, benchmarked against the other 9 players in that same
-        match.
-      </p>
+    <>
+      <TopBar />
+      <div className={styles.page}>
+        <section className={styles.intake}>
+          <h1 className="type-display-l">Last match</h1>
+          <p className={`type-body ${styles.lede}`}>
+            Enter your Riot ID for a peer-relative breakdown of your most recent game, benchmarked
+            against the other nine players in that same match.
+          </p>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", gap: 8, marginTop: 16 }}
-      >
-        <input
-          value={riotId}
-          onChange={(e) => setRiotId(e.target.value)}
-          placeholder="gameName#tagLine, e.g. Player#NA1"
-          disabled={status === "running"}
-          style={{ flex: 1, padding: "8px 10px", fontSize: 16 }}
-        />
-        <button
-          type="submit"
-          disabled={status === "running"}
-          style={{ padding: "8px 16px" }}
-        >
-          {status === "running" ? "Analyzing..." : "Analyze"}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <label className={styles.field}>
+              <span className={`type-ui ${styles.label}`}>Riot ID</span>
+              <input
+                value={riotId}
+                onChange={(e) => setRiotId(e.target.value)}
+                placeholder="gameName#tagLine, e.g. Player#NA1"
+                disabled={running}
+                className={styles.input}
+              />
+            </label>
+            <Button type="submit" disabled={running} busy={running} busyLabel="Reading…">
+              Analyze
+            </Button>
+          </form>
 
-      {status === "running" && (
-        <div style={{ marginTop: 16 }}>
-          <div
-            style={{
-              background: "#eee",
-              borderRadius: 4,
-              overflow: "hidden",
-              height: 8,
-            }}
-          >
-            <div
-              style={{
-                width: `${Math.round(progress * 100)}%`,
-                background: "#3b82f6",
-                height: "100%",
-                transition: "width 0.3s",
-              }}
-            />
-          </div>
-          <p style={{ color: "#666", fontSize: 14, marginTop: 6 }}>{message}</p>
-        </div>
-      )}
+          {running && (
+            <div className={styles.progress}>
+              <div className={styles.progressTrack}>
+                <div className={styles.progressFill} style={{ width: `${Math.round(progress * 100)}%` }} />
+              </div>
+              <p className={styles.statusLine}>
+                <PulseDot />
+                <span>{statusLine(stage, message)}</span>
+              </p>
+            </div>
+          )}
+        </section>
 
-      {error && <p style={{ color: "#b91c1c", marginTop: 16 }}>{error}</p>}
+        {status === "error" && error && (
+          <section className={styles.errorPanel}>
+            <p className={`type-eyebrow ${styles.errorEyebrow}`}>Analysis failed</p>
+            <p className={styles.errorMessage}>{error}</p>
+            <Button variant="secondary" tone="ink" onClick={handleRetry}>
+              Retry
+            </Button>
+          </section>
+        )}
 
-      {status === "done" && result && <ResultView result={result} />}
-
-      <footer
-        style={{
-          marginTop: 48,
-          paddingTop: 16,
-          borderTop: "1px solid #eee",
-          color: "#999",
-          fontSize: 12,
-        }}
-      >
-        This tool isn&apos;t endorsed by Riot Games and doesn&apos;t reflect
-        the views or opinions of Riot Games or anyone officially involved in
-        producing or managing Riot Games properties.
-      </footer>
-    </main>
+        {status === "done" && result && <ResultView result={result} />}
+      </div>
+    </>
   );
 }

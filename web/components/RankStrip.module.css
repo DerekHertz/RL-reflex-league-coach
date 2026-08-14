@@ -1,0 +1,35 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  color: var(--ink-700);
+}
+
+.value {
+  color: var(--ink-800);
+}
+
+.cells {
+  display: flex;
+  gap: 2px;
+}
+
+.cell {
+  flex: 1;
+  height: 6px;
+  border-radius: 0;
+}
+
+.caption {
+  color: var(--ink-300);
+}

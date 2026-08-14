@@ -5,6 +5,7 @@ detectors -> fact sheet -> narration -> cache into one background job.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import httpx
@@ -54,6 +55,7 @@ class CoachService:
         return self.jobs.subscribe(job_id)
 
     async def _run_analysis(self, riot_id: str, *, count: int, queue: int | None, emit: Emit) -> dict[str, Any]:
+        start = time.monotonic()
         emit("resolving", 0.02, f"Resolving {riot_id}...")
         async with httpx.AsyncClient(timeout=30.0) as http:
             client = RiotClient(api_key=self._settings.riot_api_key, limiter=self._limiter, cache=self._cache, http=http)
@@ -111,6 +113,7 @@ class CoachService:
             narrative, used_fallback = await narrate_match(sheet)
             await self._save_run(most_recent_id, player.puuid, sheet, narrative, used_fallback)
 
+        elapsed_s = time.monotonic() - start
         emit("done", 1.0, "Done")
         return {
             "puuid": player.puuid,
@@ -119,6 +122,8 @@ class CoachService:
             "fact_sheet": sheet.model_dump(mode="json"),
             "narrative": narrative.model_dump(mode="json"),
             "used_fallback": used_fallback,
+            "model": "claude-opus-5",
+            "elapsed_s": round(elapsed_s, 1),
         }
 
     async def _save_run(

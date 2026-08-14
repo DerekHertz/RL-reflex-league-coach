@@ -1,0 +1,69 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  align-items: start;
+}
+
+.main {
+  max-width: 68ch;
+  padding: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.findings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cleanChecks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cleanEyebrow {
+  color: var(--ink-300);
+}
+
+.cleanList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--ink-500);
+}
+
+.rail {
+  background: var(--rail);
+  border-left: 1px solid var(--line-soft);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  align-self: stretch;
+}
+
+@media (min-height: 900px) {
+  .rail {
+    position: sticky;
+    top: 54px;
+  }
+}
+
+.railSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.railEyebrow {
+  color: var(--ink-300);
+}
+
+.metricsList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}

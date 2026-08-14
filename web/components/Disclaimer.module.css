@@ -1,0 +1,13 @@
+.footer {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 28px;
+}
+
+.text {
+  font-family: var(--font-spectral);
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-200);
+}

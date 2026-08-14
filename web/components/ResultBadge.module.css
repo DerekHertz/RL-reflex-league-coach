@@ -1,0 +1,21 @@
+.badge {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 0;
+  display: inline-block;
+}
+
+.victory {
+  color: var(--good);
+  background: none;
+}
+
+.defeat {
+  color: var(--on-ink);
+  background: var(--bad);
+  padding: 4px 12px;
+}

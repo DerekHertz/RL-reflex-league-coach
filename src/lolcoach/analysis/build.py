@@ -44,7 +44,9 @@ _QUEUE_NAMES: dict[int, str] = {
 
 _SKILL_DETECTOR_MAP: dict[str, tuple[str, ...]] = {
     "economy": ("unspent_gold", "gold_curve_shape"),
-    "survivability": ("time_dead",),
+    "survivability": ("time_dead", "death_regions", "isolation_at_death"),
+    "vision": ("ward_drought",),
+    "objectives": ("objective_causal_deaths",),
 }
 
 

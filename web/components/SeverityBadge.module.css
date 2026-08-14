@@ -1,0 +1,29 @@
+.badge {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  display: inline-block;
+  border-radius: 0;
+}
+
+.major {
+  background: var(--sev-major);
+  color: var(--on-ink);
+}
+
+.moderate {
+  background: var(--sev-moderate);
+  color: var(--ink-800);
+}
+
+.minor {
+  background: none;
+  border: 1px solid var(--sev-minor);
+  color: var(--sev-minor);
+  /* keep total box height equal to the filled variants despite the border */
+  padding: 2px 7px;
+}

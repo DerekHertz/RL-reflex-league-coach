@@ -1,155 +1,82 @@
 import { AnalysisResult } from "@/lib/api";
-
-const SEVERITY_COLOR: Record<string, string> = {
-  major: "#b91c1c",
-  moderate: "#c2410c",
-  minor: "#a16207",
-  info: "#555",
-};
+import { ReportHeader } from "./ReportHeader";
+import { WhatWentWell } from "./WhatWentWell";
+import { FindingCard } from "./FindingCard";
+import { ClosingLine } from "./ClosingLine";
+import { Disclaimer } from "./Disclaimer";
+import { RankStrip } from "./RankStrip";
+import { SkillBandList } from "./SkillBandList";
+import { CannotSeePanel } from "./CannotSeePanel";
+import styles from "./ResultView.module.css";
 
 export function ResultView({ result }: { result: AnalysisResult }) {
   const { fact_sheet: sheet, narrative } = result;
+  const narrationByFindingId = new Map(narrative.narrations.map((n) => [n.finding_id, n]));
 
   return (
-    <section style={{ marginTop: 32 }}>
-      <h2>
-        {sheet.subject.champion} ({sheet.subject.role}) &mdash;{" "}
-        <span
-          style={{ color: sheet.match.result === "win" ? "#15803d" : "#b91c1c" }}
-        >
-          {sheet.match.result.toUpperCase()}
-        </span>{" "}
-        {sheet.match.duration}
-      </h2>
-      <p style={{ color: "#666", fontSize: 14 }}>
-        {sheet.match.queue_name} &middot; patch {sheet.match.patch}
-        {sheet.lane_opponent && <> &middot; vs {sheet.lane_opponent.champion}</>}
-      </p>
+    <div className={styles.grid}>
+      <main className={styles.main}>
+        <ReportHeader
+          sheet={sheet}
+          headline={narrative.headline}
+          model={result.model}
+          elapsedS={result.elapsed_s}
+          usedFallback={result.used_fallback}
+        />
 
-      <p style={{ fontSize: 18, fontWeight: 600, marginTop: 16 }}>
-        {narrative.headline}
-      </p>
+        <WhatWentWell items={narrative.what_went_well} />
 
-      {narrative.what_went_well.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <SectionHeading>What went well</SectionHeading>
-          <ul>
-            {narrative.what_went_well.map((item, i) => (
-              <li key={i}>{item}</li>
+        {sheet.findings.length > 0 && (
+          <section className={styles.findings}>
+            {sheet.findings.map((finding) => (
+              <FindingCard
+                key={finding.id}
+                finding={finding}
+                narration={narrationByFindingId.get(finding.id) ?? null}
+              />
             ))}
-          </ul>
-        </div>
-      )}
+          </section>
+        )}
 
-      {narrative.narrations.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <SectionHeading>Focus areas</SectionHeading>
-          {narrative.narrations.map((n) => {
-            const finding = sheet.findings.find((f) => f.id === n.finding_id);
-            return (
-              <div
-                key={n.finding_id}
-                style={{
-                  border: "1px solid #eee",
-                  borderRadius: 8,
-                  padding: 12,
-                  marginTop: 8,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                  }}
-                >
-                  <strong>{finding?.title ?? n.finding_id}</strong>
-                  {finding && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: SEVERITY_COLOR[finding.severity] ?? "#555",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {finding.severity}
-                    </span>
-                  )}
-                </div>
-                <p style={{ marginTop: 6 }}>{n.explanation}</p>
-                <p style={{ marginTop: 6, color: "#444" }}>
-                  <strong>Fix:</strong> {n.fix}
-                </p>
-                {n.drill && (
-                  <p style={{ marginTop: 6, color: "#444" }}>
-                    <strong>Drill:</strong> {n.drill}
-                  </p>
-                )}
-                {finding && finding.evidence.length > 0 && (
-                  <ul style={{ marginTop: 8, fontSize: 13, color: "#666" }}>
-                    {finding.evidence.map((e, i) => (
-                      <li key={i}>
-                        {e.label}: {e.value}
-                        {e.unit === "percent" ? "%" : ""}
-                        {e.peer_value !== null ? ` (peer: ${e.peer_value})` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <p style={{ marginTop: 16 }}>{narrative.closing}</p>
-
-      {sheet.metrics.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <SectionHeading>Metrics</SectionHeading>
-          <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
-            <tbody>
-              {sheet.metrics.map((m) => (
-                <tr key={m.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "6px 0" }}>{m.label}</td>
-                  <td style={{ padding: "6px 0", textAlign: "right" }}>{m.value}</td>
-                  <td style={{ padding: "6px 0", textAlign: "right", color: "#888" }}>
-                    {m.comparisons[0]
-                      ? `rank ${m.comparisons[0].rank_in_lobby ?? "?"}/10`
-                      : ""}
-                  </td>
-                </tr>
+        {sheet.clean_checks.length > 0 && (
+          <section className={styles.cleanChecks}>
+            <p className={`type-eyebrow ${styles.cleanEyebrow}`}>Checked, no issues</p>
+            <ul className={styles.cleanList}>
+              {sheet.clean_checks.map((check) => (
+                <li key={check.id} className="type-body-s">
+                  {check.title}
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </ul>
+          </section>
+        )}
 
-      {sheet.clean_checks.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <SectionHeading>Checked, no issues</SectionHeading>
-          <ul style={{ fontSize: 14, color: "#444" }}>
-            {sheet.clean_checks.map((c) => (
-              <li key={c.id}>{c.title}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        <ClosingLine text={narrative.closing} />
 
-      {result.used_fallback && (
-        <p style={{ marginTop: 16, fontSize: 13, color: "#a16207" }}>
-          Note: Claude&apos;s narration didn&apos;t pass validation, so this is a
-          simplified fallback summary instead.
-        </p>
-      )}
-    </section>
-  );
-}
+        <Disclaimer />
+      </main>
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 style={{ fontSize: 14, textTransform: "uppercase", color: "#666" }}>
-      {children}
-    </h3>
+      <aside className={styles.rail}>
+        {sheet.metrics.length > 0 && (
+          <section className={styles.railSection}>
+            <p className={`type-eyebrow ${styles.railEyebrow}`}>Metrics</p>
+            <div className={styles.metricsList}>
+              {sheet.metrics.map((metric) => (
+                <RankStrip key={metric.id} metric={metric} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {sheet.skill_scores.length > 0 && (
+          <section className={styles.railSection}>
+            <p className={`type-eyebrow ${styles.railEyebrow}`}>Skill read</p>
+            <SkillBandList scores={sheet.skill_scores} />
+          </section>
+        )}
+
+        <CannotSeePanel items={sheet.not_knowable} />
+      </aside>
+    </div>
   );
 }

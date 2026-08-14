@@ -1,0 +1,41 @@
+/* The main report column carries a uniform 34px padding; this header is the
+   one element in that column that needs 40px of horizontal inset, so it
+   adds 6px of its own padding on top of the inherited 34px. */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 6px;
+}
+
+.eyebrow {
+  color: var(--ink-400);
+}
+
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.meta {
+  font-family: var(--font-spectral);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--ink-400);
+  text-transform: capitalize;
+}
+
+.headline {
+  margin-top: 8px;
+  color: var(--ink-800);
+}
+
+.provenance {
+  color: var(--ink-500);
+}
+
+.fallback {
+  color: var(--rust-600);
+}

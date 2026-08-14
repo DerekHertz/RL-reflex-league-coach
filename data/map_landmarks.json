@@ -1,0 +1,30 @@
+{
+  "derived_from_n_matches": 25,
+  "landmarks": {
+    "baron_pit": {
+      "centroid": [
+        4869.0,
+        10339.1
+      ],
+      "sample_count": 9,
+      "source_monster_types": [
+        "BARON_NASHOR",
+        "RIFTHERALD"
+      ]
+    },
+    "dragon_pit": {
+      "centroid": [
+        9899.3,
+        4470.4
+      ],
+      "sample_count": 24,
+      "source_monster_types": [
+        "DRAGON"
+      ]
+    }
+  },
+  "other_monster_types_observed": {
+    "HORDE": 15,
+    "ATAKHAN": 1
+  }
+}

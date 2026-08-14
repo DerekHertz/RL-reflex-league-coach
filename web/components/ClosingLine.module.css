@@ -1,0 +1,5 @@
+.closing {
+  border-left: 2px solid var(--gold-500);
+  padding-left: 16px;
+  color: var(--ink-700);
+}

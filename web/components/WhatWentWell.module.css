@@ -1,0 +1,26 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  color: var(--jade-600);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.bullet {
+  color: var(--jade-600);
+  flex-shrink: 0;
+}
