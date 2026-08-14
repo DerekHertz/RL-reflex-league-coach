@@ -7,7 +7,7 @@ import styles from "./TopBar.module.css";
 const NAV_ITEMS: { label: string; href: string | null }[] = [
   { label: "Last match", href: "/" },
   { label: "Champions", href: "/champions" },
-  { label: "Ledger", href: null },
+  { label: "Ledger", href: "/ledger" },
   { label: "Coach", href: null },
 ];
 

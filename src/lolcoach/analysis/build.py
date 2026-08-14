@@ -92,6 +92,20 @@ def build_fact_sheet(ctx: AnalysisContext, detector_results: Sequence[DetectorRe
     )
 
 
+def finding_outcomes_for_ledger(detector_results: Sequence[DetectorResult]) -> list[tuple[str, str]]:
+    """(detector_id, outcome) pairs for the ledger's `finding_outcome` rows.
+
+    Same FINDINGS/CLEAN filter as the loop in `build_fact_sheet` above --
+    NOT_APPLICABLE/INSUFFICIENT_DATA/ERROR are excluded so every fired/total
+    ratio computed from these rows is correct by construction.
+    """
+    return [
+        (r.detector_id, "FINDINGS" if r.outcome == DetectorOutcome.FINDINGS else "CLEAN")
+        for r in detector_results
+        if r.outcome in (DetectorOutcome.FINDINGS, DetectorOutcome.CLEAN)
+    ]
+
+
 def _queue_name(queue_id: int) -> str:
     return _QUEUE_NAMES.get(queue_id, f"Queue {queue_id}")
 

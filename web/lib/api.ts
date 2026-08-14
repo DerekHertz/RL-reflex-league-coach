@@ -170,6 +170,20 @@ export interface ChampionsResponse {
   sample_size: number;
 }
 
+export interface LedgerEntry {
+  detector_key: string;
+  title: string;
+  fired: number;
+  total: number;
+  /** null below the backend's minimum-sample threshold (3 matches) -- a
+   * rate computed from 1-2 matches is noise, not signal. */
+  rate: number | null;
+}
+
+export interface LedgerResponse {
+  entries: LedgerEntry[];
+}
+
 /** Carries the HTTP status alongside the backend's `detail` message so
  * callers can branch on status (e.g. 404 "never analyzed" vs any other
  * failure) without re-parsing the response body themselves. */
@@ -195,6 +209,25 @@ export async function getChampionRecommendations(
   });
   if (!res.ok) {
     let detail = `POST /api/champions failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // Body wasn't JSON (or empty) -- fall back to the generic message.
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}
+
+export async function getLedger(riotId: string): Promise<LedgerResponse> {
+  const res = await fetch(`${API_BASE}/api/ledger`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ riot_id: riotId }),
+  });
+  if (!res.ok) {
+    let detail = `POST /api/ledger failed: ${res.status}`;
     try {
       const body = await res.json();
       if (typeof body?.detail === "string") detail = body.detail;

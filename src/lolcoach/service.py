@@ -6,13 +6,15 @@ detectors -> fact sheet -> narration -> cache into one background job.
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lolcoach.analysis.build import build_fact_sheet
+from lolcoach.analysis.build import build_fact_sheet, finding_outcomes_for_ledger
 from lolcoach.analysis.factsheet import MatchFactSheet
+from lolcoach.analysis.templates import TITLES
 from lolcoach.config import Settings, get_settings
 from lolcoach.detectors.context import AnalysisContext
 from lolcoach.detectors.registry import DETECTORS, engine_version
@@ -122,7 +124,15 @@ class CoachService:
 
             emit("narrating", 0.75, "Asking Claude for coaching narration...")
             narrative, used_fallback = await narrate_match(sheet)
-            await self._save_run(most_recent_id, player.puuid, sheet, narrative, used_fallback)
+            await self._save_run(
+                most_recent_id,
+                player.puuid,
+                sheet,
+                narrative,
+                used_fallback,
+                champion_id=ctx.subject.champion_id,
+                finding_outcomes=finding_outcomes_for_ledger(results),
+            )
 
         elapsed_s = time.monotonic() - start
         emit("done", 1.0, "Done")
@@ -183,8 +193,43 @@ class CoachService:
             "sample_size": vector.sample_size,
         }
 
+    async def get_ledger(self, riot_id: str) -> list[dict[str, Any]]:
+        """Fired/total per detector across every analysis this player has
+        ever run (see `finding_outcome`'s docstring) -- reads only the DB,
+        same NoIndexedHistoryError contract as get_champion_recommendations
+        for a player who's never run /api/analysis.
+        """
+        game_name, _, tag_line = riot_id.partition("#")
+        if not tag_line:
+            raise ValueError(f"expected 'gameName#tagLine', got {riot_id!r}")
+
+        async with session_scope(self._session_factory) as session:
+            player = await repo.get_player_by_riot_id(session, game_name=game_name, tag_line=tag_line)
+            if player is None:
+                raise NoIndexedHistoryError(riot_id)
+            ledger = await repo.list_ledger_for_player(session, puuid=player.puuid)
+
+        return [
+            {
+                "detector_key": row.detector_key,
+                "title": TITLES.get(row.detector_key, row.detector_key),
+                "fired": row.fired,
+                "total": row.total,
+                "rate": row.rate,
+            }
+            for row in ledger
+        ]
+
     async def _save_run(
-        self, match_id: str, puuid: str, sheet: MatchFactSheet, narrative: CoachingResponse, used_fallback: bool
+        self,
+        match_id: str,
+        puuid: str,
+        sheet: MatchFactSheet,
+        narrative: CoachingResponse,
+        used_fallback: bool,
+        *,
+        champion_id: int | None = None,
+        finding_outcomes: Sequence[tuple[str, str]] = (),
     ) -> None:
         async with session_scope(self._session_factory) as session:
             await repo.save_analysis_run(
@@ -195,6 +240,8 @@ class CoachService:
                 fact_sheet_json=sheet.model_dump_json(),
                 narrative_json=narrative.model_dump_json(),
                 used_fallback=used_fallback,
+                champion_id=champion_id,
+                finding_outcomes=finding_outcomes,
             )
 
     async def _index_match(self, session: AsyncSession, match_raw: dict) -> None:

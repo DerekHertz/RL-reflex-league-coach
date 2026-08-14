@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lolcoach.storage.models import AnalysisRun, Match, MatchParticipant, Player
+from lolcoach.storage.models import AnalysisRun, FindingOutcome, Match, MatchParticipant, Player
+
+MIN_LEDGER_SAMPLE = 3
 
 
 async def upsert_player(
@@ -94,7 +98,16 @@ async def save_analysis_run(
     fact_sheet_json: str,
     narrative_json: str | None,
     used_fallback: bool,
+    champion_id: int | None = None,
+    finding_outcomes: Sequence[tuple[str, str]] = (),
 ) -> AnalysisRun:
+    """finding_outcomes is (detector_key, outcome) pairs for FINDINGS/CLEAN
+    detector results only -- see FindingOutcome's docstring for why
+    NOT_APPLICABLE/INSUFFICIENT_DATA/ERROR never appear here. Written in the
+    same flush as the AnalysisRun row so the ledger is always consistent
+    with what's cached; champion_id is required if finding_outcomes is
+    non-empty.
+    """
     run = AnalysisRun(
         match_id=match_id,
         puuid=puuid,
@@ -105,7 +118,46 @@ async def save_analysis_run(
     )
     session.add(run)
     await session.flush()
+
+    if finding_outcomes:
+        assert champion_id is not None, "champion_id is required when finding_outcomes is non-empty"
+        session.add_all(
+            FindingOutcome(analysis_run_id=run.id, puuid=puuid, champion_id=champion_id, detector_key=key, outcome=outcome)
+            for key, outcome in finding_outcomes
+        )
+        await session.flush()
+
     return run
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerRow:
+    detector_key: str
+    fired: int
+    total: int
+    rate: float | None
+
+
+async def list_ledger_for_player(session: AsyncSession, *, puuid: str) -> list[LedgerRow]:
+    """Fired/total per detector across every cached analysis for this
+    player. `rate` is None below MIN_LEDGER_SAMPLE -- a rate computed from
+    one or two matches is noise, not signal.
+    """
+    fired_case = func.sum(case((FindingOutcome.outcome == "FINDINGS", 1), else_=0))
+    result = await session.execute(
+        select(FindingOutcome.detector_key, fired_case.label("fired"), func.count().label("total"))
+        .where(FindingOutcome.puuid == puuid)
+        .group_by(FindingOutcome.detector_key)
+    )
+    return [
+        LedgerRow(
+            detector_key=detector_key,
+            fired=fired,
+            total=total,
+            rate=(fired / total) if total >= MIN_LEDGER_SAMPLE else None,
+        )
+        for detector_key, fired, total in result.all()
+    ]
 
 
 async def list_analysis_runs_for_player(session: AsyncSession, *, puuid: str, limit: int = 20) -> list[AnalysisRun]:
