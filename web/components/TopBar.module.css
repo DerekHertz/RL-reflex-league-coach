@@ -25,6 +25,7 @@
 
 .navItem {
   color: var(--on-ink-mute);
+  text-decoration: none;
 }
 
 .active {

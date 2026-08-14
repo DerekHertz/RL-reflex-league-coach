@@ -1,16 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  axisLabel,
   bandColorVar,
   bandLabel,
   fetchProgressLabel,
   findingHeadTintOpacity,
+  formatAxisPercent,
   formatEvidenceValue,
   formatNumber,
   formatTimestamps,
+  isLowConfidence,
+  LOW_CONFIDENCE_THRESHOLD,
   peerLabel,
   rankTercile,
   rankTercileColorVar,
+  recKindEyebrow,
   resultLabel,
+  sampleSizeCaption,
   severityColorVar,
   severityLabel,
 } from "./presentation";
@@ -162,5 +168,61 @@ describe("formatTimestamps", () => {
   });
   it("returns a first-last range for multiple timestamps", () => {
     expect(formatTimestamps(["18:00", "24:00"])).toBe("18:00 – 24:00");
+  });
+});
+
+describe("axisLabel", () => {
+  it("humanizes every known playstyle axis, matching the backend's _AXIS_LABELS wording", () => {
+    expect(axisLabel("aggression")).toBe("aggression");
+    expect(axisLabel("farming")).toBe("farming");
+    expect(axisLabel("vision")).toBe("vision control");
+    expect(axisLabel("objective_focus")).toBe("objective focus");
+    expect(axisLabel("risk_tolerance")).toBe("risk tolerance");
+    expect(axisLabel("teamfight_vs_split")).toBe("teamfighting vs. split-pushing");
+  });
+  it("falls back to an underscore-to-space swap for an unknown axis, never raw snake_case", () => {
+    expect(axisLabel("some_new_axis")).toBe("some new axis");
+  });
+});
+
+describe("formatAxisPercent", () => {
+  it("rounds a 0..1 score to a whole-percent string", () => {
+    expect(formatAxisPercent(0.6137254901960784)).toBe("61%");
+  });
+  it("rounds down when the fraction is below .5", () => {
+    expect(formatAxisPercent(0.554)).toBe("55%");
+  });
+  it("handles the 0 and 1 boundaries", () => {
+    expect(formatAxisPercent(0)).toBe("0%");
+    expect(formatAxisPercent(1)).toBe("100%");
+  });
+});
+
+describe("isLowConfidence", () => {
+  it("is true below the documented threshold", () => {
+    expect(isLowConfidence(0.49)).toBe(true);
+  });
+  it("is false at or above the documented threshold", () => {
+    expect(isLowConfidence(LOW_CONFIDENCE_THRESHOLD)).toBe(false);
+    expect(isLowConfidence(0.73)).toBe(false);
+  });
+});
+
+describe("sampleSizeCaption", () => {
+  it("pluralizes for counts other than 1", () => {
+    expect(sampleSizeCaption(10)).toBe("based on 10 recent games");
+    expect(sampleSizeCaption(0)).toBe("based on 0 recent games");
+  });
+  it("stays singular for exactly 1", () => {
+    expect(sampleSizeCaption(1)).toBe("based on 1 recent game");
+  });
+});
+
+describe("recKindEyebrow", () => {
+  it("labels comfort picks", () => {
+    expect(recKindEyebrow("comfort")).toBe("Champions that fit how you play");
+  });
+  it("labels stretch picks", () => {
+    expect(recKindEyebrow("stretch")).toBe("Worth trying");
   });
 });

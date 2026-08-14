@@ -121,3 +121,46 @@ export function formatTimestamps(timestamps: string[]): string | null {
   if (timestamps.length === 1) return timestamps[0];
   return `${timestamps[0]} – ${timestamps[timestamps.length - 1]}`;
 }
+
+// --- Playstyle / champion recommendations -----------------------------
+// Mirrors src/lolcoach/playstyle/recommend.py's _AXIS_LABELS exactly, so
+// wording stays consistent with the rationale text the backend already
+// generates (which spells these labels out inline).
+const AXIS_LABELS: Record<string, string> = {
+  aggression: "aggression",
+  farming: "farming",
+  vision: "vision control",
+  objective_focus: "objective focus",
+  risk_tolerance: "risk tolerance",
+  teamfight_vs_split: "teamfighting vs. split-pushing",
+};
+
+/** Humanizes a playstyle axis key. Unknown axes fall back to a plain
+ * underscore-to-space swap rather than ever rendering raw snake_case. */
+export function axisLabel(axis: string): string {
+  return AXIS_LABELS[axis] ?? axis.replace(/_/g, " ");
+}
+
+/** A 0..1 axis score as a whole-percent string, e.g. 0.6137... -> "61%". */
+export function formatAxisPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+/** Below this, the playstyle read is thin enough to caveat in copy rather
+ * than presented as a confident signal. Documented threshold per spec. */
+export const LOW_CONFIDENCE_THRESHOLD = 0.5;
+
+export function isLowConfidence(confidence: number): boolean {
+  return confidence < LOW_CONFIDENCE_THRESHOLD;
+}
+
+export function sampleSizeCaption(sampleSize: number): string {
+  return `based on ${sampleSize} recent game${sampleSize === 1 ? "" : "s"}`;
+}
+
+export const LOW_CONFIDENCE_CAVEAT =
+  "This read is thin on this few games -- treat it as a rough sketch, not a settled pattern.";
+
+export function recKindEyebrow(kind: "comfort" | "stretch"): string {
+  return kind === "comfort" ? "Champions that fit how you play" : "Worth trying";
+}

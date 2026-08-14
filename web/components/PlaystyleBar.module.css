@@ -1,0 +1,30 @@
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  color: var(--ink-700);
+}
+
+.value {
+  color: var(--ink-800);
+}
+
+.track {
+  height: 6px;
+  background: var(--paper-500);
+}
+
+.fill {
+  height: 100%;
+  background: var(--gold-500);
+}

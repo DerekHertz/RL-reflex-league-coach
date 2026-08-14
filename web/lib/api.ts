@@ -140,3 +140,68 @@ export async function startAnalysis(
   }
   return res.json();
 }
+
+export type Role = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY";
+
+export interface PlaystyleVector {
+  aggression: number;
+  farming: number;
+  vision: number;
+  objective_focus: number;
+  risk_tolerance: number;
+  teamfight_vs_split: number;
+  sample_size: number;
+  confidence: number;
+}
+
+export interface ChampionRec {
+  champion: string;
+  roles: string[];
+  fit_score: number;
+  kind: "comfort" | "stretch";
+  matched_axes: string[];
+  stretch_axis: string | null;
+  rationale: string;
+}
+
+export interface ChampionsResponse {
+  playstyle: PlaystyleVector;
+  recommendations: ChampionRec[];
+  sample_size: number;
+}
+
+/** Carries the HTTP status alongside the backend's `detail` message so
+ * callers can branch on status (e.g. 404 "never analyzed" vs any other
+ * failure) without re-parsing the response body themselves. */
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+export async function getChampionRecommendations(
+  riotId: string,
+  role: Role | null = null,
+): Promise<ChampionsResponse> {
+  const res = await fetch(`${API_BASE}/api/champions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ riot_id: riotId, role }),
+  });
+  if (!res.ok) {
+    let detail = `POST /api/champions failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // Body wasn't JSON (or empty) -- fall back to the generic message.
+    }
+    throw new ApiError(res.status, detail);
+  }
+  return res.json();
+}
