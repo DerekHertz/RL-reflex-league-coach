@@ -37,3 +37,9 @@ def time_dead_share(total_time_spent_dead_s: float, duration_s: float) -> float:
     if duration_s <= 0:
         return 0.0
     return total_time_spent_dead_s / duration_s
+
+
+def deaths_per_minute(deaths: int, duration_s: float) -> float:
+    if duration_s <= 0:
+        return 0.0
+    return deaths / (duration_s / 60.0)

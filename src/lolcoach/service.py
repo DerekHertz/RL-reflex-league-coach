@@ -22,11 +22,22 @@ from lolcoach.domain.timeline import TimelineIndex
 from lolcoach.jobs.runner import Emit, JobRunner
 from lolcoach.llm.narrator import narrate_match
 from lolcoach.llm.schemas import CoachingResponse
+from lolcoach.playstyle.archetypes import get_default_archetypes
+from lolcoach.playstyle.build import build_playstyle_vector
+from lolcoach.playstyle.recommend import recommend_champions
 from lolcoach.riot.cache import FileRawCache
 from lolcoach.riot.client import RiotClient
 from lolcoach.riot.rate_limiter import HeaderAwareLimiter
 from lolcoach.storage import repo
 from lolcoach.storage.db import init_db, make_engine, make_session_factory, session_scope
+
+
+class NoIndexedHistoryError(RuntimeError):
+    """Raised when a player has no matches indexed in MatchParticipant yet
+    (i.e. they've never had /api/analysis -- or `lolcoach fetch` -- run for
+    them). See CoachService.get_champion_recommendations's docstring for why
+    the champions endpoint doesn't fetch on-demand.
+    """
 
 
 class CoachService:
@@ -124,6 +135,52 @@ class CoachService:
             "used_fallback": used_fallback,
             "model": "claude-opus-5",
             "elapsed_s": round(elapsed_s, 1),
+        }
+
+    async def get_champion_recommendations(self, riot_id: str, *, role: str | None = None) -> dict[str, Any]:
+        """Playstyle vector + champion recommendations for a player, computed
+        purely from already-cached match JSON + the DB's match-participant
+        index -- no Riot API calls, no LLM calls, so this is meant to answer
+        in well under a second on a warm cache.
+
+        Deliberately synchronous/non-job: unlike /api/analysis (which fetches
+        from Riot and calls Claude, both slow enough to need SSE progress),
+        this only reads local state. If the player has never had
+        /api/analysis (or `lolcoach fetch`) run for them, there is nothing
+        indexed to compute from; rather than silently kicking off a ~20s
+        background fetch behind what looks like a fast endpoint, this raises
+        NoIndexedHistoryError so the route can return a clear 4xx telling the
+        caller to run /api/analysis first. (A future iteration could offer
+        both paths, but the simpler one is proportionate to what M7 asked
+        for.)
+        """
+        game_name, _, tag_line = riot_id.partition("#")
+        if not tag_line:
+            raise ValueError(f"expected 'gameName#tagLine', got {riot_id!r}")
+
+        async with session_scope(self._session_factory) as session:
+            player = await repo.get_player_by_riot_id(session, game_name=game_name, tag_line=tag_line)
+            if player is None:
+                raise NoIndexedHistoryError(riot_id)
+            match_ids = await repo.list_match_ids_for_player(session, puuid=player.puuid)
+
+        matches: list[tuple[MatchView, str]] = []
+        for match_id in match_ids:
+            raw = self._cache.get("match", match_id)
+            if raw is not None:
+                matches.append((MatchView(raw), player.puuid))
+
+        if not matches:
+            raise NoIndexedHistoryError(riot_id)
+
+        vector = build_playstyle_vector(matches)
+        archetypes = list(get_default_archetypes())
+        recommendations = recommend_champions(vector, archetypes, role=role)
+
+        return {
+            "playstyle": vector,
+            "recommendations": recommendations,
+            "sample_size": vector.sample_size,
         }
 
     async def _save_run(

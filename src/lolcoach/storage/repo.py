@@ -57,6 +57,21 @@ async def upsert_match_participants(session: AsyncSession, rows: list[dict]) -> 
     await session.execute(stmt)
 
 
+async def list_match_ids_for_player(session: AsyncSession, *, puuid: str, limit: int = 50) -> list[str]:
+    """Match IDs indexed for this puuid (see service.py's `_index_match` --
+    this covers every match a player's history was ever fetched for, not
+    just ones that went through detectors/narration), most recent first.
+    """
+    result = await session.execute(
+        select(MatchParticipant.match_id)
+        .join(Match, Match.match_id == MatchParticipant.match_id)
+        .where(MatchParticipant.puuid == puuid)
+        .order_by(Match.game_creation_ms.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def get_cached_analysis(
     session: AsyncSession, *, match_id: str, puuid: str, engine_version: str
 ) -> AnalysisRun | None:

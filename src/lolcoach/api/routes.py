@@ -5,9 +5,17 @@ import json
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from lolcoach.api.schemas import JobStatusResponse, MetaResponse, StartAnalysisRequest, StartAnalysisResponse
+from lolcoach.api.schemas import (
+    ChampionsRequest,
+    ChampionsResponse,
+    JobStatusResponse,
+    MetaResponse,
+    StartAnalysisRequest,
+    StartAnalysisResponse,
+)
 from lolcoach.detectors.registry import engine_version
-from lolcoach.service import CoachService
+from lolcoach.playstyle.archetypes import VALID_ROLES
+from lolcoach.service import CoachService, NoIndexedHistoryError
 
 router = APIRouter(prefix="/api")
 
@@ -50,6 +58,35 @@ async def get_analysis_status(job_id: str, request: Request) -> JobStatusRespons
         result=state.result,
         error=state.error,
     )
+
+
+@router.post("/champions", response_model=ChampionsResponse)
+async def get_champions(body: ChampionsRequest, request: Request) -> ChampionsResponse:
+    """Playstyle vector + champion recommendations, computed purely from
+    already-cached match JSON and the local match-participant index -- no
+    Riot/Claude calls, so (unlike /api/analysis) this is a plain sync
+    request/response rather than a background job with SSE progress; a warm
+    cache answers in well under a second. See
+    CoachService.get_champion_recommendations's docstring for the cold-cache
+    (never-analyzed player) decision.
+    """
+    if body.role is not None and body.role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"invalid role {body.role!r}; expected one of {VALID_ROLES}")
+
+    service = _service(request)
+    try:
+        result = await service.get_champion_recommendations(body.riot_id, role=body.role)
+    except NoIndexedHistoryError:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No indexed match history for this player yet. "
+                "Run POST /api/analysis first to fetch and index their recent matches, then retry."
+            ),
+        ) from None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return ChampionsResponse(**result)
 
 
 @router.get("/analysis/{job_id}/events")

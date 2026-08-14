@@ -7,6 +7,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from lolcoach.playstyle.recommend import ChampionRec
+from lolcoach.playstyle.vector import PlaystyleVector
+
 
 class StartAnalysisRequest(BaseModel):
     riot_id: str
@@ -30,3 +33,14 @@ class JobStatusResponse(BaseModel):
 class MetaResponse(BaseModel):
     disclaimer: str
     engine_version: str
+
+
+class ChampionsRequest(BaseModel):
+    riot_id: str
+    role: str | None = None
+
+
+class ChampionsResponse(BaseModel):
+    playstyle: PlaystyleVector
+    recommendations: list[ChampionRec]
+    sample_size: int

@@ -1,0 +1,273 @@
+# Hand-authored champion archetypes for the playstyle recommendation engine
+# (src/lolcoach/playstyle/). Axis/salience values reflect League of Legends
+# kit/role identity from domain knowledge -- Riot's API exposes no win-rate
+# or tier data, and scraping third-party sites for it is against their ToS,
+# so this is the legitimate, documented alternative (see
+# src/lolcoach/playstyle/archetypes.py's module docstring).
+#
+# axes: the champion's own typical playstyle profile, 0..1 per axis, same 6
+#   axes as PlaystyleVector (aggression, farming, vision, objective_focus,
+#   risk_tolerance, teamfight_vs_split -- 0 = pure splitpush, 1 = pure
+#   teamfight).
+# salience: how much each axis defines this champion's identity -- used to
+#   weight fit scoring so a champion's signature traits count more than
+#   incidental ones. Not required to sum to 1, kept on a comparable ~0..1
+#   scale.
+
+- name: "Darius"
+  roles: ["TOP"]
+  axes: {aggression: 0.9, farming: 0.55, vision: 0.1, objective_focus: 0.35, risk_tolerance: 0.75, teamfight_vs_split: 0.35}
+  salience: {aggression: 1.0, risk_tolerance: 0.7, teamfight_vs_split: 0.5, farming: 0.3, vision: 0.1, objective_focus: 0.2}
+  identity: "Bleed-stacking duelist who wins isolated 1v1s and snowballs off early kills"
+
+- name: "Fiora"
+  roles: ["TOP"]
+  axes: {aggression: 0.8, farming: 0.65, vision: 0.1, objective_focus: 0.25, risk_tolerance: 0.6, teamfight_vs_split: 0.15}
+  salience: {aggression: 0.8, teamfight_vs_split: 1.0, farming: 0.5, risk_tolerance: 0.5, vision: 0.1, objective_focus: 0.1}
+  identity: "Vitals-hunting duelist and the definitive split-push win condition"
+
+- name: "Camille"
+  roles: ["TOP"]
+  axes: {aggression: 0.75, farming: 0.6, vision: 0.15, objective_focus: 0.4, risk_tolerance: 0.55, teamfight_vs_split: 0.3}
+  salience: {teamfight_vs_split: 0.7, aggression: 0.7, risk_tolerance: 0.4, farming: 0.3, objective_focus: 0.3, vision: 0.1}
+  identity: "Skirmishing duelist/splitpusher who roams off resets and picks off isolated targets"
+
+- name: "Ornn"
+  roles: ["TOP"]
+  axes: {aggression: 0.3, farming: 0.7, vision: 0.25, objective_focus: 0.8, risk_tolerance: 0.25, teamfight_vs_split: 0.9}
+  salience: {teamfight_vs_split: 1.0, objective_focus: 0.6, risk_tolerance: 0.3, aggression: 0.2, farming: 0.3, vision: 0.2}
+  identity: "Tanky frontline anchor who forges items for the team and lives for 5v5s"
+
+- name: "Malphite"
+  roles: ["TOP"]
+  axes: {aggression: 0.35, farming: 0.55, vision: 0.2, objective_focus: 0.75, risk_tolerance: 0.3, teamfight_vs_split: 0.95}
+  salience: {teamfight_vs_split: 1.0, objective_focus: 0.5, aggression: 0.3, risk_tolerance: 0.3, farming: 0.2, vision: 0.1}
+  identity: "Engage tank whose entire kit exists to start a teamfight with one ultimate"
+
+- name: "Jax"
+  roles: ["TOP"]
+  axes: {aggression: 0.7, farming: 0.7, vision: 0.1, objective_focus: 0.35, risk_tolerance: 0.5, teamfight_vs_split: 0.55}
+  salience: {farming: 0.6, teamfight_vs_split: 0.5, aggression: 0.5, risk_tolerance: 0.3, objective_focus: 0.2, vision: 0.1}
+  identity: "Scaling duelist who splits early and becomes a teamfight-ending weapon late"
+
+- name: "Sett"
+  roles: ["TOP", "UTILITY"]
+  axes: {aggression: 0.8, farming: 0.5, vision: 0.2, objective_focus: 0.4, risk_tolerance: 0.65, teamfight_vs_split: 0.7}
+  salience: {aggression: 0.7, teamfight_vs_split: 0.6, risk_tolerance: 0.5, farming: 0.2, objective_focus: 0.3, vision: 0.1}
+  identity: "Grappling brawler who drags people into his team and thrives on chaos"
+
+- name: "Aatrox"
+  roles: ["TOP"]
+  axes: {aggression: 0.85, farming: 0.55, vision: 0.1, objective_focus: 0.3, risk_tolerance: 0.7, teamfight_vs_split: 0.45}
+  salience: {aggression: 0.9, risk_tolerance: 0.6, teamfight_vs_split: 0.4, farming: 0.2, objective_focus: 0.2, vision: 0.1}
+  identity: "All-in bruiser who dives onto backlines and lives off healing from his passive"
+
+- name: "Gnar"
+  roles: ["TOP"]
+  axes: {aggression: 0.55, farming: 0.65, vision: 0.15, objective_focus: 0.45, risk_tolerance: 0.35, teamfight_vs_split: 0.6}
+  salience: {farming: 0.5, teamfight_vs_split: 0.4, risk_tolerance: 0.3, aggression: 0.3, objective_focus: 0.3, vision: 0.1}
+  identity: "Poke-and-transform splitpusher with a game-changing engage in Mega form"
+
+- name: "Mordekaiser"
+  roles: ["TOP"]
+  axes: {aggression: 0.8, farming: 0.7, vision: 0.1, objective_focus: 0.25, risk_tolerance: 0.6, teamfight_vs_split: 0.1}
+  salience: {teamfight_vs_split: 1.0, aggression: 0.6, risk_tolerance: 0.4, farming: 0.3, objective_focus: 0.1, vision: 0.1}
+  identity: "1v1 island-duel specialist who removes the best enemy from every fight"
+
+- name: "Lee Sin"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.85, farming: 0.5, vision: 0.35, objective_focus: 0.55, risk_tolerance: 0.7, teamfight_vs_split: 0.3}
+  salience: {aggression: 0.9, risk_tolerance: 0.6, objective_focus: 0.4, teamfight_vs_split: 0.3, vision: 0.2, farming: 0.2}
+  identity: "High-mobility skirmisher who invades, ganks early, and forces fights across the map"
+
+- name: "Elise"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.75, farming: 0.55, vision: 0.3, objective_focus: 0.5, risk_tolerance: 0.65, teamfight_vs_split: 0.35}
+  salience: {aggression: 0.8, risk_tolerance: 0.5, objective_focus: 0.3, farming: 0.2, vision: 0.2, teamfight_vs_split: 0.2}
+  identity: "Early-game invader who snowballs off level-2/3 ganks and dives"
+
+- name: "Amumu"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.35, farming: 0.5, vision: 0.3, objective_focus: 0.8, risk_tolerance: 0.3, teamfight_vs_split: 0.95}
+  salience: {teamfight_vs_split: 1.0, objective_focus: 0.5, aggression: 0.2, risk_tolerance: 0.3, farming: 0.2, vision: 0.2}
+  identity: "One-button engage tank who wins games by curling into 5 people at once"
+
+- name: "Sejuani"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.5, farming: 0.55, vision: 0.3, objective_focus: 0.8, risk_tolerance: 0.35, teamfight_vs_split: 0.85}
+  salience: {teamfight_vs_split: 0.9, objective_focus: 0.7, aggression: 0.3, risk_tolerance: 0.3, farming: 0.2, vision: 0.2}
+  identity: "Frontline engage tank built around chain-CC teamfights and objective control"
+
+- name: "Master Yi"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.6, farming: 0.85, vision: 0.05, objective_focus: 0.3, risk_tolerance: 0.45, teamfight_vs_split: 0.2}
+  salience: {farming: 1.0, teamfight_vs_split: 0.5, aggression: 0.3, risk_tolerance: 0.2, objective_focus: 0.2, vision: 0.05}
+  identity: "Farm-scaling duelist who splits lanes and one-shots isolated targets late"
+
+- name: "Kindred"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.45, farming: 0.8, vision: 0.2, objective_focus: 0.85, risk_tolerance: 0.4, teamfight_vs_split: 0.4}
+  salience: {objective_focus: 1.0, farming: 0.6, aggression: 0.2, risk_tolerance: 0.2, teamfight_vs_split: 0.2, vision: 0.2}
+  identity: "Objective-obsessed marksman jungler whose ultimate is built around epic monsters"
+
+- name: "Nidalee"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.7, farming: 0.6, vision: 0.15, objective_focus: 0.4, risk_tolerance: 0.55, teamfight_vs_split: 0.25}
+  salience: {aggression: 0.7, risk_tolerance: 0.4, farming: 0.3, teamfight_vs_split: 0.3, objective_focus: 0.2, vision: 0.1}
+  identity: "Poke-and-pounce assassin jungler who snowballs off early spear hits"
+
+- name: "Vi"
+  roles: ["JUNGLE"]
+  axes: {aggression: 0.8, farming: 0.55, vision: 0.15, objective_focus: 0.5, risk_tolerance: 0.65, teamfight_vs_split: 0.55}
+  salience: {aggression: 0.7, risk_tolerance: 0.5, teamfight_vs_split: 0.4, objective_focus: 0.3, farming: 0.2, vision: 0.1}
+  identity: "Dive-onto-the-backline jungler who single-target locks down a priority target"
+
+- name: "Ahri"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.6, farming: 0.55, vision: 0.3, objective_focus: 0.4, risk_tolerance: 0.45, teamfight_vs_split: 0.7}
+  salience: {aggression: 1.0, teamfight_vs_split: 0.8, farming: 0.4, vision: 0.3, objective_focus: 0.3, risk_tolerance: 0.5}
+  identity: "Mobile burst mage, picks off isolated targets, weak early"
+
+- name: "Zed"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.9, farming: 0.6, vision: 0.1, objective_focus: 0.25, risk_tolerance: 0.75, teamfight_vs_split: 0.15}
+  salience: {aggression: 1.0, risk_tolerance: 0.6, teamfight_vs_split: 0.5, farming: 0.3, objective_focus: 0.1, vision: 0.1}
+  identity: "All-in assassin who dives the backline alone to delete one high-value target"
+
+- name: "Orianna"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.4, farming: 0.65, vision: 0.3, objective_focus: 0.55, risk_tolerance: 0.3, teamfight_vs_split: 0.9}
+  salience: {teamfight_vs_split: 1.0, objective_focus: 0.4, farming: 0.4, aggression: 0.2, risk_tolerance: 0.2, vision: 0.2}
+  identity: "Ball-and-shockwave control mage whose entire value is grouped 5v5 fights"
+
+- name: "Azir"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.3, farming: 0.8, vision: 0.2, objective_focus: 0.55, risk_tolerance: 0.2, teamfight_vs_split: 0.85}
+  salience: {farming: 0.8, teamfight_vs_split: 0.8, objective_focus: 0.3, aggression: 0.1, risk_tolerance: 0.1, vision: 0.1}
+  identity: "Scaling zone-control mage who wins with soldiers and shuffle, not solo plays"
+
+- name: "Yasuo"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.75, farming: 0.6, vision: 0.1, objective_focus: 0.3, risk_tolerance: 0.65, teamfight_vs_split: 0.6}
+  salience: {aggression: 0.7, teamfight_vs_split: 0.5, risk_tolerance: 0.5, farming: 0.3, objective_focus: 0.2, vision: 0.1}
+  identity: "Mobile duelist who dashes through minions to reset and delete backlines with allies' CC"
+
+- name: "Viktor"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.35, farming: 0.75, vision: 0.25, objective_focus: 0.5, risk_tolerance: 0.25, teamfight_vs_split: 0.8}
+  salience: {farming: 0.7, teamfight_vs_split: 0.7, objective_focus: 0.3, aggression: 0.2, risk_tolerance: 0.1, vision: 0.2}
+  identity: "Scaling zone-control mage who wins with a well-placed gravity field"
+
+- name: "LeBlanc"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.85, farming: 0.5, vision: 0.15, objective_focus: 0.2, risk_tolerance: 0.7, teamfight_vs_split: 0.2}
+  salience: {aggression: 0.9, risk_tolerance: 0.6, teamfight_vs_split: 0.4, farming: 0.3, objective_focus: 0.1, vision: 0.1}
+  identity: "Burst assassin who blinks in for a pick and blinks out before anyone reacts"
+
+- name: "Annie"
+  roles: ["MIDDLE"]
+  axes: {aggression: 0.55, farming: 0.7, vision: 0.2, objective_focus: 0.4, risk_tolerance: 0.35, teamfight_vs_split: 0.85}
+  salience: {teamfight_vs_split: 0.8, aggression: 0.3, farming: 0.4, objective_focus: 0.3, risk_tolerance: 0.2, vision: 0.1}
+  identity: "Point-and-click stun mage who wins the game the instant she lands a teamfight ultimate"
+
+- name: "Jinx"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.45, farming: 0.75, vision: 0.15, objective_focus: 0.55, risk_tolerance: 0.25, teamfight_vs_split: 0.75}
+  salience: {farming: 0.6, teamfight_vs_split: 0.7, objective_focus: 0.3, aggression: 0.2, risk_tolerance: 0.2, vision: 0.1}
+  identity: "Hyper-scaling teamfight carry who wants the game to go long and group"
+
+- name: "Kaisa"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.6, farming: 0.65, vision: 0.2, objective_focus: 0.45, risk_tolerance: 0.45, teamfight_vs_split: 0.55}
+  salience: {aggression: 0.4, teamfight_vs_split: 0.5, farming: 0.4, risk_tolerance: 0.3, objective_focus: 0.3, vision: 0.1}
+  identity: "Evolving hybrid carry who dives into fights with invisibility and jump resets"
+
+- name: "Ashe"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.3, farming: 0.7, vision: 0.35, objective_focus: 0.5, risk_tolerance: 0.2, teamfight_vs_split: 0.65}
+  salience: {farming: 0.5, vision: 0.3, teamfight_vs_split: 0.5, objective_focus: 0.3, aggression: 0.1, risk_tolerance: 0.1}
+  identity: "Kiting scaling carry whose ultimate creates picks and enables teamfights from range"
+
+- name: "Caitlyn"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.55, farming: 0.75, vision: 0.3, objective_focus: 0.3, risk_tolerance: 0.3, teamfight_vs_split: 0.3}
+  salience: {farming: 0.6, aggression: 0.5, vision: 0.3, teamfight_vs_split: 0.3, risk_tolerance: 0.2, objective_focus: 0.1}
+  identity: "Long-range lane bully who zones opponents off minions and traps chokepoints"
+
+- name: "Vayne"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.6, farming: 0.65, vision: 0.1, objective_focus: 0.2, risk_tolerance: 0.55, teamfight_vs_split: 0.2}
+  salience: {teamfight_vs_split: 0.9, aggression: 0.5, risk_tolerance: 0.4, farming: 0.4, objective_focus: 0.1, vision: 0.1}
+  identity: "1v1 duelist carry who wins by isolating a single target and true-damaging them down"
+
+- name: "Xayah"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.5, farming: 0.7, vision: 0.15, objective_focus: 0.35, risk_tolerance: 0.3, teamfight_vs_split: 0.6}
+  salience: {farming: 0.5, teamfight_vs_split: 0.5, aggression: 0.3, objective_focus: 0.2, risk_tolerance: 0.2, vision: 0.1}
+  identity: "Feather-setup carry who roots down a target the instant her partner engages"
+
+- name: "Miss Fortune"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.5, farming: 0.65, vision: 0.2, objective_focus: 0.45, risk_tolerance: 0.3, teamfight_vs_split: 0.8}
+  salience: {teamfight_vs_split: 0.9, farming: 0.3, aggression: 0.3, objective_focus: 0.3, risk_tolerance: 0.2, vision: 0.1}
+  identity: "Grouped-fight carry whose ultimate deletes a clustered enemy team in seconds"
+
+- name: "Draven"
+  roles: ["BOTTOM"]
+  axes: {aggression: 0.85, farming: 0.6, vision: 0.1, objective_focus: 0.2, risk_tolerance: 0.7, teamfight_vs_split: 0.25}
+  salience: {aggression: 0.9, risk_tolerance: 0.5, farming: 0.4, teamfight_vs_split: 0.3, objective_focus: 0.1, vision: 0.1}
+  identity: "All-in lane bully who snowballs axes into an early, aggressive lead"
+
+- name: "Thresh"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.6, farming: 0.1, vision: 0.55, objective_focus: 0.45, risk_tolerance: 0.5, teamfight_vs_split: 0.5}
+  salience: {aggression: 0.5, vision: 0.5, risk_tolerance: 0.4, teamfight_vs_split: 0.3, objective_focus: 0.3, farming: 0.05}
+  identity: "Playmaking hook support who creates picks and peels for carries in equal measure"
+
+- name: "Lulu"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.2, farming: 0.1, vision: 0.5, objective_focus: 0.35, risk_tolerance: 0.15, teamfight_vs_split: 0.8}
+  salience: {teamfight_vs_split: 0.8, vision: 0.4, risk_tolerance: 0.3, aggression: 0.1, farming: 0.05, objective_focus: 0.2}
+  identity: "Peel-and-buff enchanter whose entire job is keeping her carry alive in 5v5s"
+
+- name: "Nautilus"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.55, farming: 0.15, vision: 0.45, objective_focus: 0.5, risk_tolerance: 0.55, teamfight_vs_split: 0.85}
+  salience: {teamfight_vs_split: 0.8, aggression: 0.4, vision: 0.3, risk_tolerance: 0.4, objective_focus: 0.3, farming: 0.05}
+  identity: "Chain-CC engage tank who leads with his face to start every fight"
+
+- name: "Pyke"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.9, farming: 0.2, vision: 0.3, objective_focus: 0.2, risk_tolerance: 0.85, teamfight_vs_split: 0.15}
+  salience: {aggression: 0.9, risk_tolerance: 0.6, teamfight_vs_split: 0.5, vision: 0.2, farming: 0.05, objective_focus: 0.1}
+  identity: "Roaming kill-lane support who hunts picks bot and across the map instead of peeling"
+
+- name: "Soraka"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.1, farming: 0.15, vision: 0.5, objective_focus: 0.3, risk_tolerance: 0.1, teamfight_vs_split: 0.6}
+  salience: {risk_tolerance: 0.6, aggression: 0.5, vision: 0.3, teamfight_vs_split: 0.3, farming: 0.05, objective_focus: 0.1}
+  identity: "Global-heal enchanter who wins through sustain and attrition, never the pick"
+
+- name: "Blitzcrank"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.75, farming: 0.1, vision: 0.3, objective_focus: 0.35, risk_tolerance: 0.6, teamfight_vs_split: 0.35}
+  salience: {aggression: 0.8, risk_tolerance: 0.5, vision: 0.2, teamfight_vs_split: 0.2, farming: 0.05, objective_focus: 0.2}
+  identity: "Single-target pick support whose hook turns any lane into a kill"
+
+- name: "Leona"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.7, farming: 0.1, vision: 0.5, objective_focus: 0.5, risk_tolerance: 0.6, teamfight_vs_split: 0.8}
+  salience: {teamfight_vs_split: 0.8, aggression: 0.5, vision: 0.4, risk_tolerance: 0.4, objective_focus: 0.3, farming: 0.05}
+  identity: "Full-commit engage tank who chains CC to start fights for her team"
+
+- name: "Yuumi"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.1, farming: 0.05, vision: 0.2, objective_focus: 0.1, risk_tolerance: 0.05, teamfight_vs_split: 0.55}
+  salience: {risk_tolerance: 0.7, aggression: 0.5, vision: 0.3, teamfight_vs_split: 0.2, farming: 0.05, objective_focus: 0.1}
+  identity: "Attached enchanter who removes herself from danger and buffs from inside an ally"
+
+- name: "Rakan"
+  roles: ["UTILITY"]
+  axes: {aggression: 0.5, farming: 0.1, vision: 0.85, objective_focus: 0.3, risk_tolerance: 0.5, teamfight_vs_split: 0.85}
+  salience: {vision: 0.7, teamfight_vs_split: 0.7, aggression: 0.4, risk_tolerance: 0.3, objective_focus: 0.2, farming: 0.05}
+  identity: "Dive-in engage support who vaults into fights and shields/roots for the team, wards religiously between engages"

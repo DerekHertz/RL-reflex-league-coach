@@ -98,6 +98,14 @@ class ParticipantView:
         return self.raw.get("totalDamageDealtToChampions", 0)
 
     @property
+    def damage_dealt_to_objectives(self) -> int:
+        return self.raw.get("damageDealtToObjectives", 0)
+
+    @property
+    def damage_dealt_to_buildings(self) -> int:
+        return self.raw.get("damageDealtToBuildings", 0)
+
+    @property
     def challenges(self) -> Challenges:
         return Challenges(self.raw.get("challenges"))
 

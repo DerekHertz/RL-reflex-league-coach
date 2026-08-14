@@ -70,6 +70,16 @@ def _translate_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
     mapping = {
         "total_time_spent_dead": "totalTimeSpentDead",
         "team_position": "teamPosition",
+        "champion_name": "championName",
+        "wards_placed": "wardsPlaced",
+        "wards_killed": "wardsKilled",
+        "vision_score": "visionScore",
+        "gold_earned": "goldEarned",
+        "total_minions_killed": "totalMinionsKilled",
+        "neutral_minions_killed": "neutralMinionsKilled",
+        "damage_dealt_to_objectives": "damageDealtToObjectives",
+        "damage_dealt_to_buildings": "damageDealtToBuildings",
+        "total_damage_dealt_to_champions": "totalDamageDealtToChampions",
     }
     return {mapping.get(k, k): v for k, v in kwargs.items()}
 
