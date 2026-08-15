@@ -35,7 +35,11 @@ _OBJECTIVE_WINDOW_MS = 60_000
 
 class DeathRegionsDetector:
     id: ClassVar[str] = "death_regions"
-    version: ClassVar[int] = 1
+    # Bumped 1 -> 2 for the temporal-concentration gate (region share alone
+    # used to be sufficient) -- required so engine_version() changes and a
+    # previously-cached AnalysisRun for the same match doesn't keep serving
+    # the old finding forever. See registry.py's engine_version docstring.
+    version: ClassVar[int] = 2
     title: ClassVar[str] = "Where you die"
     needs: ClassVar[frozenset[DataNeed]] = frozenset({DataNeed.TIMELINE})
     min_duration_s: ClassVar[int] = 600
