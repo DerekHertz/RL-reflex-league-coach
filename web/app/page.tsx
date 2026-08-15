@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/Button";
 import { PulseDot } from "@/components/PulseDot";
 import { ResultView } from "@/components/ResultView";
-import { API_BASE, AnalysisEvent, AnalysisResult, startAnalysis } from "@/lib/api";
+import { useSession } from "@/lib/session";
 import { fetchProgressLabel } from "@/lib/presentation";
 import styles from "./page.module.css";
-
-type Status = "idle" | "running" | "done" | "error";
 
 function statusLine(stage: string, message: string): string {
   if (stage === "fetching") return fetchProgressLabel(message);
@@ -18,77 +16,25 @@ function statusLine(stage: string, message: string): string {
 }
 
 export default function Home() {
-  const [riotId, setRiotId] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState("");
-  const [message, setMessage] = useState("");
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-
-  useEffect(() => {
-    return () => {
-      eventSourceRef.current?.close();
-    };
-  }, []);
-
-  async function runAnalysis(id: string) {
-    setError(null);
-    setResult(null);
-    setStatus("running");
-    setProgress(0);
-    setStage("queued");
-    setMessage("Starting...");
-
-    try {
-      const { job_id } = await startAnalysis(id);
-      const es = new EventSource(`${API_BASE}/api/analysis/${job_id}/events`);
-      eventSourceRef.current = es;
-
-      es.onmessage = (evt) => {
-        const data: AnalysisEvent = JSON.parse(evt.data);
-        setProgress(data.progress);
-        setStage(data.stage);
-        setMessage(data.message);
-
-        if (data.status === "done") {
-          setStatus("done");
-          setResult(data.result);
-          es.close();
-        } else if (data.status === "error") {
-          setStatus("error");
-          setError(data.error ?? "Analysis failed for an unknown reason.");
-          es.close();
-        }
-      };
-
-      es.onerror = () => {
-        setStatus("error");
-        setError("Lost connection to the analysis stream.");
-        es.close();
-      };
-    } catch (err) {
-      setStatus("error");
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
+  const { riotId, analysis, analyze } = useSession();
+  const [inputValue, setInputValue] = useState(riotId);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!riotId.includes("#")) {
-      setError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
-      setStatus("error");
+    if (!inputValue.includes("#")) {
+      setValidationError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
       return;
     }
-    void runAnalysis(riotId);
+    setValidationError(null);
+    analyze(inputValue);
   }
 
   function handleRetry() {
-    void runAnalysis(riotId);
+    analyze(inputValue);
   }
 
-  const running = status === "running";
+  const running = analysis.status === "loading";
 
   return (
     <>
@@ -105,8 +51,8 @@ export default function Home() {
             <label className={styles.field}>
               <span className={`type-ui ${styles.label}`}>Riot ID</span>
               <input
-                value={riotId}
-                onChange={(e) => setRiotId(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 placeholder="gameName#tagLine, e.g. Player#NA1"
                 disabled={running}
                 className={styles.input}
@@ -120,27 +66,34 @@ export default function Home() {
           {running && (
             <div className={styles.progress}>
               <div className={styles.progressTrack}>
-                <div className={styles.progressFill} style={{ width: `${Math.round(progress * 100)}%` }} />
+                <div className={styles.progressFill} style={{ width: `${Math.round(analysis.progress * 100)}%` }} />
               </div>
               <p className={styles.statusLine}>
                 <PulseDot />
-                <span>{statusLine(stage, message)}</span>
+                <span>{statusLine(analysis.stage, analysis.message)}</span>
               </p>
             </div>
           )}
         </section>
 
-        {status === "error" && error && (
+        {validationError && (
           <section className={styles.errorPanel}>
             <p className={`type-eyebrow ${styles.errorEyebrow}`}>Analysis failed</p>
-            <p className={styles.errorMessage}>{error}</p>
+            <p className={styles.errorMessage}>{validationError}</p>
+          </section>
+        )}
+
+        {!validationError && analysis.status === "error" && analysis.error && (
+          <section className={styles.errorPanel}>
+            <p className={`type-eyebrow ${styles.errorEyebrow}`}>Analysis failed</p>
+            <p className={styles.errorMessage}>{analysis.error}</p>
             <Button variant="secondary" tone="ink" onClick={handleRetry}>
               Retry
             </Button>
           </section>
         )}
 
-        {status === "done" && result && <ResultView result={result} />}
+        {analysis.status === "done" && analysis.result && <ResultView result={analysis.result} />}
       </div>
     </>
   );
