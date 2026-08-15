@@ -92,6 +92,28 @@ def test_region_concentration_at_60_percent_boundary_is_major() -> None:
     assert result.findings[0].severity == Severity.MAJOR
 
 
+def test_same_region_deaths_spread_across_the_game_are_not_concentrated() -> None:
+    # 3 deaths, 30-minute game: mid at 0:30, mid at 25:00, top at 27:00.
+    # 2/3 (66.7%) share in mid_lane would clear even the MAJOR threshold, but
+    # the two mid_lane deaths are 24.5 minutes apart -- unrelated events, not
+    # a pattern of dying in the same spot.
+    kills = [_death(30, _MID_LANE), _death(1500, _MID_LANE), _death(1620, _TOP_LANE)]
+    ctx = _ctx(kills)
+    result = DeathRegionsDetector.run(ctx)
+    assert result.outcome == DetectorOutcome.CLEAN
+
+
+def test_same_region_deaths_clustered_in_time_are_still_concentrated_with_low_total() -> None:
+    # Same 2/3 share and low total death count as above, but this time the
+    # two mid_lane deaths are 90 seconds apart, early in a 30-minute game --
+    # a real pattern, should still fire despite the low total.
+    kills = [_death(30, _MID_LANE), _death(120, _MID_LANE), _death(1620, _TOP_LANE)]
+    ctx = _ctx(kills)
+    result = DeathRegionsDetector.run(ctx)
+    assert result.outcome == DetectorOutcome.FINDINGS
+    assert result.findings[0].severity == Severity.MAJOR
+
+
 def test_deep_deaths_with_no_nearby_objective_flagged_separately() -> None:
     # 5 deaths: 3 scattered across distinct "deep" regions (60% deep, but no
     # single region concentrated >=40%), 2 shallow.
