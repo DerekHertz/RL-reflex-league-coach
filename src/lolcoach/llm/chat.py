@@ -16,7 +16,11 @@ from lolcoach.llm.guard import NumberProvenanceGuard, repair_note
 from lolcoach.llm.prompts import SYSTEM_CHAT
 from lolcoach.llm.schemas import ChatAnswer, ChatTurn, CoachingResponse
 
-_MODEL = "claude-opus-5"
+# narrate_match uses opus-5 (multi-finding synthesis, once per match). Chat is bounded
+# single-turn Q&A over content that's already assembled (the fact sheet + narration),
+# called repeatedly per session -- sonnet fits the latency/cost profile without a real
+# capability tradeoff, since the guard enforces correctness independent of model.
+_MODEL = "claude-sonnet-5"
 _MAX_TOKENS = 4000  # a chat answer is a few sentences, not a full report
 
 
