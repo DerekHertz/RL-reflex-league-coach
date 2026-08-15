@@ -1,62 +1,38 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/Button";
 import { Disclaimer } from "@/components/Disclaimer";
-import { ApiError, LedgerEntry, PoolChampionEntry, PoolResponse, getPool } from "@/lib/api";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { useSession } from "@/lib/session";
+import { LedgerEntry, PoolChampionEntry } from "@/lib/api";
 import styles from "./page.module.css";
-
-type Status = "idle" | "loading" | "done" | "error";
 
 // Mirrors storage/repo.py's MIN_LEDGER_SAMPLE -- a champion with fewer
 // cached games than this is shown locked rather than with noisy rates.
 const MIN_SAMPLE = 3;
 
 export default function PoolPage() {
-  const [riotId, setRiotId] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [data, setData] = useState<PoolResponse | null>(null);
-  const [notIndexed, setNotIndexed] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function runLookup(id: string) {
-    setStatus("loading");
-    setData(null);
-    setNotIndexed(null);
-    setError(null);
-
-    try {
-      const result = await getPool(id);
-      setData(result);
-      setStatus("done");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setNotIndexed(err.detail);
-      } else {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-      setStatus("error");
-    }
-  }
+  const { riotId, analysis, pool, analyze } = useSession();
+  const [inputValue, setInputValue] = useState(riotId);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!riotId.includes("#")) {
-      setError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
-      setNotIndexed(null);
-      setStatus("error");
+    if (!inputValue.includes("#")) {
+      setValidationError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
       return;
     }
-    void runLookup(riotId);
+    setValidationError(null);
+    analyze(inputValue);
   }
 
   function handleRetry() {
-    void runLookup(riotId);
+    analyze(inputValue);
   }
 
-  const loading = status === "loading";
+  const busy = analysis.status === "loading" || pool.status === "loading";
 
   return (
     <>
@@ -73,47 +49,50 @@ export default function PoolPage() {
             <label className={`${styles.field} ${styles.riotIdField}`}>
               <span className={`type-ui ${styles.label}`}>Riot ID</span>
               <input
-                value={riotId}
-                onChange={(e) => setRiotId(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 placeholder="gameName#tagLine, e.g. Player#NA1"
-                disabled={loading}
+                disabled={busy}
                 className={styles.input}
               />
             </label>
-            <Button type="submit" disabled={loading} busy={loading} busyLabel="Reading…">
+            <Button type="submit" disabled={busy} busy={busy} busyLabel="Reading…">
               Show my pool
             </Button>
           </form>
+
+          <AnalysisProgress />
         </section>
 
-        {status === "error" && notIndexed && (
-          <section className={styles.notIndexedPanel}>
-            <p className={`type-eyebrow ${styles.notIndexedEyebrow}`}>No history indexed yet</p>
-            <p className={`type-body ${styles.notIndexedMessage}`}>{notIndexed}</p>
-            <Link href="/" className={`type-ui ${styles.indexLink}`}>
-              Analyze a match to index this player
-            </Link>
+        {validationError && (
+          <section className={styles.errorPanel}>
+            <p className={`type-eyebrow ${styles.errorEyebrow}`}>Lookup failed</p>
+            <p className={styles.errorMessage}>{validationError}</p>
           </section>
         )}
 
-        {status === "error" && error && !notIndexed && (
+        {pool.status === "loading" && analysis.status !== "loading" && (
+          <p className={`type-ui ${styles.lede}`}>Loading your pool…</p>
+        )}
+
+        {pool.status === "error" && pool.error && (
           <section className={styles.errorPanel}>
             <p className={`type-eyebrow ${styles.errorEyebrow}`}>Lookup failed</p>
-            <p className={styles.errorMessage}>{error}</p>
+            <p className={styles.errorMessage}>{pool.error}</p>
             <Button variant="secondary" tone="ink" onClick={handleRetry}>
               Retry
             </Button>
           </section>
         )}
 
-        {status === "done" && data && (
+        {pool.status === "done" && pool.data && (
           <div className={styles.report}>
-            {data.champions.length === 0 ? (
+            {pool.data.champions.length === 0 ? (
               <p className={`type-body ${styles.lede}`}>
                 No analyzed matches yet for this player -- run an analysis first.
               </p>
             ) : (
-              data.champions.map((champion) => <ChampionSection key={champion.champion_id} champion={champion} />)
+              pool.data.champions.map((champion) => <ChampionSection key={champion.champion_id} champion={champion} />)
             )}
             <Disclaimer />
           </div>

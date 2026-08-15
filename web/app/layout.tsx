@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Spectral, JetBrains_Mono } from "next/font/google";
+import { SessionProvider } from "@/lib/session";
 import "./tokens.css";
 import "./typography.css";
 import "./globals.css";
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${cormorant.variable} ${spectral.variable} ${jetbrainsMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }

@@ -1,15 +1,42 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PoolPage from "./page";
+import { useSession } from "@/lib/session";
+
+vi.mock("@/lib/session", () => ({ useSession: vi.fn() }));
 
 const DISCLAIMER_TEXT =
   "This tool isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games " +
   "or anyone officially involved in producing or managing Riot Games properties.";
 
-const NOT_INDEXED_DETAIL =
-  "No indexed match history for this player yet. " +
-  "Run POST /api/analysis first to fetch and index their recent matches, then retry.";
+const idleAnalysis = { status: "idle" as const, progress: 0, stage: "", message: "", result: null, error: null };
+const idleResource = { status: "idle" as const, data: null, error: null };
+
+function mockSession(overrides: Partial<ReturnType<typeof useSession>> = {}) {
+  const analyze = vi.fn();
+  vi.mocked(useSession).mockReturnValue({
+    riotId: "",
+    analysis: idleAnalysis,
+    champions: idleResource,
+    ledger: idleResource,
+    pool: idleResource,
+    analyze,
+    ...overrides,
+  });
+  return analyze;
+}
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ disclaimer: DISCLAIMER_TEXT, engine_version: "test" }) }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const POOL_RESPONSE = {
   champions: [
@@ -31,92 +58,47 @@ const POOL_RESPONSE = {
   ],
 };
 
-function stubFetch(poolHandler: () => Promise<Response> | Response) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((input: RequestInfo | URL) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("/api/meta")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ disclaimer: DISCLAIMER_TEXT, engine_version: "test" }),
-        } as Response);
-      }
-      if (url.includes("/api/pool")) {
-        return Promise.resolve(poolHandler());
-      }
-      throw new Error(`unexpected fetch to ${url}`);
-    }),
-  );
-}
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-async function submitRiotId(id: string) {
-  const user = userEvent.setup();
-  await user.type(screen.getByPlaceholderText(/gameName#tagLine/), id);
-  await user.click(screen.getByRole("button", { name: /show my pool/i }));
-}
-
 describe("PoolPage", () => {
-  beforeEach(() => {
-    stubFetch(() => ({ ok: true, json: async () => POOL_RESPONSE }) as Response);
-  });
-
-  it("shows only the form before any submission", () => {
+  it("shows only the form before anything has been fetched this session", () => {
+    mockSession();
     render(<PoolPage />);
     expect(screen.getByRole("heading", { name: "Your pool" })).toBeInTheDocument();
     expect(screen.queryByText("Annie")).not.toBeInTheDocument();
   });
 
-  it("renders an unlocked champion's entries and a locked champion's message", async () => {
+  it("calls the shared analyze() on submit instead of fetching directly", async () => {
+    const analyze = mockSession();
     render(<PoolPage />);
-    await submitRiotId("4DH#NA1");
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText(/gameName#tagLine/), "4DH#NA1");
+    await user.click(screen.getByRole("button", { name: /show my pool/i }));
+    expect(analyze).toHaveBeenCalledWith("4DH#NA1");
+  });
 
-    await waitFor(() => expect(screen.getByText("Annie")).toBeInTheDocument());
+  it("renders cached pool data immediately -- unlocked champion's entries and a locked champion's message", () => {
+    mockSession({ riotId: "4DH#NA1", analysis: { ...idleAnalysis, status: "done" }, pool: { status: "done", data: POOL_RESPONSE, error: null } });
+    render(<PoolPage />);
+
     expect(screen.getByText("Fired in 3/5 games (60%)")).toBeInTheDocument();
     expect(screen.getByText("2 games captured -- not enough data yet")).toBeInTheDocument();
-
     expect(screen.getByText("Ahri")).toBeInTheDocument();
     expect(screen.getByText("1 more game to unlock this champion's stats")).toBeInTheDocument();
-    // Locked champion's entries are never rendered, even though the API returned them.
     expect(screen.queryByText("Fired in 1/2 games")).not.toBeInTheDocument();
-
-    await waitFor(() => expect(screen.getByText(DISCLAIMER_TEXT)).toBeInTheDocument());
   });
 
-  it("renders the exact backend 404 detail text and a link back to the report page", async () => {
-    stubFetch(
-      () =>
-        ({
-          ok: false,
-          status: 404,
-          json: async () => ({ detail: NOT_INDEXED_DETAIL }),
-        }) as Response,
-    );
+  it("shows the shared analysis progress message while the background job runs", () => {
+    mockSession({ analysis: { status: "loading", progress: 0.5, stage: "narrating", message: "Asking Claude...", result: null, error: null } });
     render(<PoolPage />);
-    await submitRiotId("NeverAnalyzed#NA1");
-
-    await waitFor(() => expect(screen.getByText(NOT_INDEXED_DETAIL)).toBeInTheDocument());
-    const link = screen.getByRole("link", { name: /analyze a match to index this player/i });
-    expect(link).toHaveAttribute("href", "/");
+    expect(screen.getByText(/Asking Claude/)).toBeInTheDocument();
   });
 
-  it("renders a retry-able error panel for non-404 failures", async () => {
-    stubFetch(
-      () =>
-        ({
-          ok: false,
-          status: 500,
-          json: async () => ({ detail: "boom" }),
-        }) as Response,
-    );
+  it("shows a retry-able error panel when the pool fetch failed", async () => {
+    const analyze = mockSession({ pool: { status: "error", data: null, error: "boom" } });
     render(<PoolPage />);
-    await submitRiotId("Someone#NA1");
+    expect(screen.getByText("boom")).toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByText("boom")).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /retry/i }));
+    expect(analyze).toHaveBeenCalled();
   });
 });

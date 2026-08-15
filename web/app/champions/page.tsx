@@ -7,6 +7,8 @@ import { Button } from "@/components/Button";
 import { PlaystyleSummary } from "@/components/PlaystyleSummary";
 import { ChampionRecCard } from "@/components/ChampionRecCard";
 import { Disclaimer } from "@/components/Disclaimer";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { useSession } from "@/lib/session";
 import { ApiError, ChampionsResponse, getChampionRecommendations, Role } from "@/lib/api";
 import { recKindEyebrow } from "@/lib/presentation";
 import styles from "./page.module.css";
@@ -23,49 +25,65 @@ const ROLE_OPTIONS: { value: Role | ""; label: string }[] = [
 ];
 
 export default function ChampionsPage() {
-  const [riotId, setRiotId] = useState("");
+  const { riotId, analysis, champions, analyze } = useSession();
+  const [inputValue, setInputValue] = useState(riotId);
   const [role, setRole] = useState<Role | "">("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [data, setData] = useState<ChampionsResponse | null>(null);
-  const [notIndexed, setNotIndexed] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  async function runLookup(id: string, r: Role | "") {
-    setStatus("loading");
-    setData(null);
-    setNotIndexed(null);
-    setError(null);
+  // A role filter is a refinement of already-indexed data, not a reason to
+  // re-run the full analyze() pipeline -- so it's its own direct fetch,
+  // local to this page, layered on top of the shared "any role" result
+  // rather than written back to SessionContext.
+  const [roleStatus, setRoleStatus] = useState<Status>("idle");
+  const [roleData, setRoleData] = useState<ChampionsResponse | null>(null);
+  const [roleNotIndexed, setRoleNotIndexed] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  async function runRoleQuery(id: string, r: Role) {
+    setRoleStatus("loading");
+    setRoleData(null);
+    setRoleNotIndexed(null);
+    setRoleError(null);
 
     try {
-      const result = await getChampionRecommendations(id, r === "" ? null : r);
-      setData(result);
-      setStatus("done");
+      const result = await getChampionRecommendations(id, r);
+      setRoleData(result);
+      setRoleStatus("done");
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setNotIndexed(err.detail);
+        setRoleNotIndexed(err.detail);
       } else {
-        setError(err instanceof Error ? err.message : String(err));
+        setRoleError(err instanceof Error ? err.message : String(err));
       }
-      setStatus("error");
+      setRoleStatus("error");
     }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!riotId.includes("#")) {
-      setError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
-      setNotIndexed(null);
-      setStatus("error");
+    if (!inputValue.includes("#")) {
+      setValidationError("Enter a Riot ID as gameName#tagLine, e.g. Player#NA1");
       return;
     }
-    void runLookup(riotId, role);
+    setValidationError(null);
+    if (role === "") {
+      analyze(inputValue);
+    } else {
+      void runRoleQuery(inputValue, role);
+    }
   }
 
   function handleRetry() {
-    void runLookup(riotId, role);
+    if (role === "") {
+      analyze(inputValue);
+    } else {
+      void runRoleQuery(inputValue, role);
+    }
   }
 
-  const loading = status === "loading";
+  const usingRoleFilter = role !== "";
+  const data = usingRoleFilter ? roleData : champions.data;
+  const busy = usingRoleFilter ? roleStatus === "loading" : analysis.status === "loading" || champions.status === "loading";
   const comfortRecs = data?.recommendations.filter((r) => r.kind === "comfort") ?? [];
   const stretchRecs = data?.recommendations.filter((r) => r.kind === "stretch") ?? [];
 
@@ -84,10 +102,10 @@ export default function ChampionsPage() {
             <label className={`${styles.field} ${styles.riotIdField}`}>
               <span className={`type-ui ${styles.label}`}>Riot ID</span>
               <input
-                value={riotId}
-                onChange={(e) => setRiotId(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 placeholder="gameName#tagLine, e.g. Player#NA1"
-                disabled={loading}
+                disabled={busy}
                 className={styles.input}
               />
             </label>
@@ -96,7 +114,7 @@ export default function ChampionsPage() {
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role | "")}
-                disabled={loading}
+                disabled={busy}
                 className={styles.select}
               >
                 {ROLE_OPTIONS.map((opt) => (
@@ -106,33 +124,46 @@ export default function ChampionsPage() {
                 ))}
               </select>
             </label>
-            <Button type="submit" disabled={loading} busy={loading} busyLabel="Matching…">
+            <Button type="submit" disabled={busy} busy={busy} busyLabel="Matching…">
               Find champions
             </Button>
           </form>
+
+          {!usingRoleFilter && <AnalysisProgress />}
         </section>
 
-        {status === "error" && notIndexed && (
+        {validationError && (
+          <section className={styles.errorPanel}>
+            <p className={`type-eyebrow ${styles.errorEyebrow}`}>Lookup failed</p>
+            <p className={styles.errorMessage}>{validationError}</p>
+          </section>
+        )}
+
+        {usingRoleFilter && roleNotIndexed && (
           <section className={styles.notIndexedPanel}>
             <p className={`type-eyebrow ${styles.notIndexedEyebrow}`}>No history indexed yet</p>
-            <p className={`type-body ${styles.notIndexedMessage}`}>{notIndexed}</p>
+            <p className={`type-body ${styles.notIndexedMessage}`}>{roleNotIndexed}</p>
             <Link href="/" className={`type-ui ${styles.indexLink}`}>
               Analyze a match to index this player
             </Link>
           </section>
         )}
 
-        {status === "error" && error && !notIndexed && (
+        {!usingRoleFilter && champions.status === "loading" && analysis.status !== "loading" && (
+          <p className={`type-ui ${styles.lede}`}>Loading your champion recommendations…</p>
+        )}
+
+        {((usingRoleFilter && roleStatus === "error" && roleError) || (!usingRoleFilter && champions.status === "error" && champions.error)) && (
           <section className={styles.errorPanel}>
             <p className={`type-eyebrow ${styles.errorEyebrow}`}>Lookup failed</p>
-            <p className={styles.errorMessage}>{error}</p>
+            <p className={styles.errorMessage}>{usingRoleFilter ? roleError : champions.error}</p>
             <Button variant="secondary" tone="ink" onClick={handleRetry}>
               Retry
             </Button>
           </section>
         )}
 
-        {status === "done" && data && (
+        {data && (
           <div className={styles.report}>
             <PlaystyleSummary playstyle={data.playstyle} />
 
