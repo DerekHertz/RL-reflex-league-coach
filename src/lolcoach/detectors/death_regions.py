@@ -21,6 +21,13 @@ from lolcoach.domain.geometry import MapGeometry, map_depth, side_normalize, to_
 _MIN_DEATHS = 3
 _CONCENTRATION_THRESHOLD = 0.40
 _CONCENTRATION_MAJOR = 0.60
+# A region's deaths only count as "concentrated" if they also happened close
+# together in time -- two deaths in the same region 25 minutes apart in a
+# 30-minute game are unrelated events, not a pattern, even if that region is
+# a majority share of a low total death count. This is a ratio of the
+# region's own death-timestamp span to total game duration, not a fixed
+# death-count floor: it scales with however long the game ran.
+_CONCENTRATION_MAX_TIME_SPAN_RATIO = 0.5
 _DEEP_DEPTH_THRESHOLD = 0.6
 _DEEP_DEATH_SHARE_THRESHOLD = 0.40
 _OBJECTIVE_WINDOW_MS = 60_000
@@ -84,10 +91,12 @@ class DeathRegionsDetector:
 
         findings: list[Finding] = []
 
-        if region_share >= _CONCENTRATION_THRESHOLD:
-            region_death_timestamps = tuple(
-                d["timestamp"] / 1000.0 for d, r in zip(deaths, regions, strict=True) if r == top_region
-            )
+        region_death_timestamps = tuple(
+            d["timestamp"] / 1000.0 for d, r in zip(deaths, regions, strict=True) if r == top_region
+        )
+        region_time_span_ratio = (max(region_death_timestamps) - min(region_death_timestamps)) / ctx.match.duration_s
+
+        if region_share >= _CONCENTRATION_THRESHOLD and region_time_span_ratio <= _CONCENTRATION_MAX_TIME_SPAN_RATIO:
             region_positions = tuple(p for p, r in zip(normalized_positions, regions, strict=True) if r == top_region)
             severity = Severity.MAJOR if region_share >= _CONCENTRATION_MAJOR else Severity.MODERATE
             findings.append(
