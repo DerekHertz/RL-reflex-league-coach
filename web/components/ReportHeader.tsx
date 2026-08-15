@@ -36,7 +36,7 @@ export function ReportHeader({
       </blockquote>
 
       <p className={`type-body-s ${styles.provenance}`}>
-        Narrated by Claude · {model} · {elapsedS}s
+        {usedFallback ? `${model} attempted, didn't validate` : `Narrated by Claude · ${model}`} · {elapsedS}s
       </p>
       {usedFallback && (
         <p className={`type-body-s ${styles.fallback}`}>
