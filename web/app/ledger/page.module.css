@@ -4,7 +4,7 @@
 }
 
 .intake {
-  max-width: 68ch;
+  max-width: 96ch;
   margin: 0 auto;
   padding: 40px 34px 34px;
   display: flex;
@@ -57,39 +57,8 @@
   outline-offset: 2px;
 }
 
-.notIndexedPanel {
-  max-width: 68ch;
-  margin: 0 auto;
-  padding: 0 34px 34px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.notIndexedEyebrow {
-  color: var(--ink-300);
-}
-
-.notIndexedMessage {
-  color: var(--ink-700);
-}
-
-.indexLink {
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 18px;
-  border: 1px solid var(--line-strong);
-  color: var(--ink-700);
-  text-decoration: none;
-}
-
-.indexLink:hover {
-  background: rgba(90, 70, 45, 0.06);
-}
-
 .errorPanel {
-  max-width: 68ch;
+  max-width: 96ch;
   margin: 0 auto 34px;
   background: var(--ink-900);
   color: var(--on-ink);
@@ -114,7 +83,7 @@
 }
 
 .report {
-  max-width: 68ch;
+  max-width: 96ch;
   margin: 0 auto;
   padding: 0 34px 34px;
   display: flex;
@@ -140,6 +109,8 @@
 }
 
 .entryTitle {
+  flex: 1;
+  min-width: 0;
   color: var(--ink-800);
 }
 
